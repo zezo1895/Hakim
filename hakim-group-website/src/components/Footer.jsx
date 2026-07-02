@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Phone, MapPin, Mail, Share2, MessageSquare, Camera } from "lucide-react";
 
-const WHATSAPP = "https://wa.me/201234567890";
+const WHATSAPP = "https://wa.me/201144505575";
 
 const quickLinks = [
   { label: "الصفحة الرئيسية", to: "/" },
