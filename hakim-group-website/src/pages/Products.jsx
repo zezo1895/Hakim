@@ -1,6 +1,6 @@
 // src/pages/Products.jsx
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, ZoomIn, Search, X } from "lucide-react";
 import Loader from "../components/Loader";
@@ -58,15 +58,37 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
+  // قراءة القطاع (الفئة الرئيسية) من رابط الصفحة، لو جاي من كروت "قطاعاتنا" في الرئيسية
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryFromUrl = searchParams.get("category") || "الكل";
+
   // الفلاتر
+  const [activeCategory, setActiveCategory] = useState(categoryFromUrl);
   const [activeMaterial, setActiveMaterial] = useState("الكل");
   const [activeType, setActiveType] = useState("الكل");
   const [searchTerm, setSearchTerm] = useState("");
-  
-  // قوائم الخامات والأنواع المستخرجة من البيانات
+
+  // قوائم الفئات والخامات والأنواع المستخرجة من البيانات
+  const [categoriesList, setCategoriesList] = useState(["الكل"]);
   const [materialsList, setMaterialsList] = useState(["الكل"]);
   const [typesList, setTypesList] = useState(["الكل"]);
+
+  // لو المستخدم غيّر رابط الصفحة (مثلاً رجع من كارت قطاع تاني) نحدّث الفلتر
+  useEffect(() => {
+    setActiveCategory(categoryFromUrl);
+  }, [categoryFromUrl]);
+
+  // تغيير فلتر الفئة يحدّث الرابط كمان عشان يفضل قابل للمشاركة
+  const handleCategoryChange = (c) => {
+    setActiveCategory(c);
+    if (c === "الكل") {
+      searchParams.delete("category");
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ category: c });
+    }
+  };
 
   // جلب المنتجات من قاعدة البيانات
   useEffect(() => {
@@ -82,8 +104,10 @@ export default function Products() {
         
         // استخراج قوائم الخامات والأنواع الفريدة
         if (Array.isArray(data) && data.length > 0) {
+          const cats = [...new Set(data.map(p => p.material_category).filter(Boolean))];
           const materials = [...new Set(data.map(p => p.material_name).filter(Boolean))];
           const types = [...new Set(data.map(p => p.type_name).filter(Boolean))];
+          setCategoriesList(["الكل", ...cats]);
           setMaterialsList(["الكل", ...materials]);
           setTypesList(["الكل", ...types]);
         }
@@ -102,6 +126,7 @@ export default function Products() {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filtered = products.filter(
     (p) =>
+      (activeCategory === "الكل" || p.material_category === activeCategory) &&
       (activeMaterial === "الكل" || p.material_name === activeMaterial) &&
       (activeType === "الكل" || p.type_name === activeType) &&
       (normalizedSearch === "" ||
@@ -140,7 +165,9 @@ export default function Products() {
           <span className="inline-block px-4 py-1 rounded-full bg-white/10 text-xs font-bold mb-4">
             الكتالوج الرقمي
           </span>
-          <h1 className="text-3xl sm:text-4xl font-black mb-3">كتالوج المنتجات</h1>
+          <h1 className="text-3xl sm:text-4xl font-black mb-3">
+            {activeCategory === "الكل" ? "كتالوج المنتجات" : `كتالوج ${activeCategory}`}
+          </h1>
           <p className="text-blue-200 text-sm sm:text-base">
             تصفح منتجاتنا من البلاستيك والكرتون والفوم بالأنواع والمقاسات والمواصفات الكاملة
           </p>
@@ -175,6 +202,12 @@ export default function Products() {
 
           {/* Filters */}
           <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 mb-8">
+            <FilterRow
+              label="القطاع"
+              options={categoriesList}
+              active={activeCategory}
+              onChange={handleCategoryChange}
+            />
             <FilterRow 
               label="الخامة" 
               options={materialsList} 
@@ -190,7 +223,7 @@ export default function Products() {
             
             {/* عرض عدد النتائج */}
             <div className="text-xs text-gray-400 mt-2">
-              {filtered.length} منتج {activeMaterial !== "الكل" && `من ${activeMaterial}`} {activeType !== "الكل" && `من نوع ${activeType}`}
+              {filtered.length} منتج {activeCategory !== "الكل" && `في ${activeCategory}`} {activeMaterial !== "الكل" && `من ${activeMaterial}`} {activeType !== "الكل" && `من نوع ${activeType}`}
             </div>
           </div>
 
@@ -295,6 +328,7 @@ export default function Products() {
               </p>
               <button 
                 onClick={() => {
+                  handleCategoryChange("الكل");
                   setActiveMaterial("الكل");
                   setActiveType("الكل");
                   setSearchTerm("");

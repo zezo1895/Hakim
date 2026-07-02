@@ -6,10 +6,14 @@ import pipe from "../assets/pipes2.jpg"
 import al from "../assets/al2.jpg"
 import plast from "../assets/plast2.jpg"
 
+// ⚠️ قيمة "category" هنا لازم تطابق بالحرف اسم الفئة (material_categories.name)
+// المُسجَّل فعليًا في قاعدة البيانات / لوحة التحكم. لو الاسم مختلف عندك،
+// عدّل القيمة هنا فقط وكل حاجة هتشتغل صح تلقائيًا.
 const sectors = [
   {
     id: "food",
     title: "قطاع البلاستيك",
+    category: "بلاستيك",
     code: "10.8040",
     label: "علبة",
     ctaLabel: "تصفح كتالوج التغليف",
@@ -21,6 +25,7 @@ const sectors = [
   {
     id: "pipes",
     title: "قطاع المواسير",
+    category: "مواسير",
     code: "10.531",
     label: "غطاء",
     ctaLabel: "تصفح كتالوج المواسير",
@@ -32,6 +37,7 @@ const sectors = [
   {
     id: "aluminium",
     title: "قطاع الألومنيوم",
+    category: "ألومنيوم",
     code: "AL.101",
     label: "بروفيل",
     ctaLabel: "تصفح كتالوج الألومنيوم",
@@ -92,7 +98,7 @@ function SectorCard({ s }) {
       <div className="px-5 pb-5 pt-3 mt-auto">
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
           <Link
-            to="/products"
+            to={`/products?category=${encodeURIComponent(s.category)}`}
             className="flex items-center justify-center w-full py-2.5 rounded-xl font-bold text-sm text-brand-blue bg-blue-50 hover:bg-blue-100 transition-colors"
           >
             {s.ctaLabel}
