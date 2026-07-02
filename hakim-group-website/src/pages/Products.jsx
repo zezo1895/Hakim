@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, Loader2, ZoomIn } from "lucide-react";
+import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, Loader2, ZoomIn, Search, X } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -61,6 +61,7 @@ export default function Products() {
   // الفلاتر
   const [activeMaterial, setActiveMaterial] = useState("الكل");
   const [activeType, setActiveType] = useState("الكل");
+  const [searchTerm, setSearchTerm] = useState("");
   
   // قوائم الخامات والأنواع المستخرجة من البيانات
   const [materialsList, setMaterialsList] = useState(["الكل"]);
@@ -97,10 +98,14 @@ export default function Products() {
   }, []);
 
   // تصفية المنتجات
+  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filtered = products.filter(
     (p) =>
       (activeMaterial === "الكل" || p.material_name === activeMaterial) &&
-      (activeType === "الكل" || p.type_name === activeType)
+      (activeType === "الكل" || p.type_name === activeType) &&
+      (normalizedSearch === "" ||
+        p.name?.toLowerCase().includes(normalizedSearch) ||
+        p.code?.toLowerCase().includes(normalizedSearch))
   );
 
   // عرض حالة التحميل
@@ -153,6 +158,27 @@ export default function Products() {
 
       <section className="py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* Search box */}
+          <div className="relative mb-5">
+            <Search size={18} className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="ابحث باسم المنتج أو الكود..."
+              className="w-full bg-white border border-gray-200 rounded-2xl py-3 pr-11 pl-10 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/40 focus:border-brand-blue transition"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 hover:text-gray-600"
+                aria-label="مسح البحث"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
           {/* Filters */}
           <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 mb-8">
             <FilterRow 
@@ -269,12 +295,15 @@ export default function Products() {
             <div className="text-center py-16">
               <div className="text-6xl mb-4">🔍</div>
               <p className="text-gray-400 text-sm">
-                لا توجد منتجات في هذا التصنيف حالياً.
+                {searchTerm
+                  ? `لا توجد نتائج مطابقة لـ "${searchTerm}"`
+                  : "لا توجد منتجات في هذا التصنيف حالياً."}
               </p>
               <button 
                 onClick={() => {
                   setActiveMaterial("الكل");
                   setActiveType("الكل");
+                  setSearchTerm("");
                 }}
                 className="mt-4 text-brand-blue text-sm font-bold hover:underline"
               >

@@ -18,7 +18,37 @@ import {
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const WHATSAPP_BASE = "https://wa.me/201234567890?text=أريد تسعير المنتج: ";
+
+// ⚠️ غيّر الرقم ده برقم الواتساب بتاع الشركة (بصيغة دولية بدون + أو أصفار في الأول)
+// مثال لمصر: 201001234567
+const WHATSAPP_NUMBER = "201144505575";
+
+// بناء رسالة تفصيلية كاملة عن المنتج (الاسم، الكود، الخامة، النوع، المقاس، الحرارة، رابط الصورة، ورابط صفحة المنتج)
+function buildWhatsappMessage(product, imageUrl) {
+  const lines = [
+    "مرحباً، أريد طلب تسعير للمنتج التالي:",
+    "",
+    `📦 *الاسم:* ${product.name}`,
+  ];
+
+  if (product.code) lines.push(`🔖 *الكود:* ${product.code}`);
+  if (product.material_name) lines.push(`🧱 *الخامة:* ${product.material_name}`);
+  if (product.type_name) lines.push(`🏷️ *النوع:* ${product.type_name}`);
+  if (product.size) lines.push(`📏 *المقاس:* ${product.size}`);
+  if (product.temp) {
+    const tempLabel = product.temp === "both" ? "ساخن وبارد" : product.temp === "hot" ? "ساخن" : "بارد";
+    lines.push(`🌡️ *يتحمل:* ${tempLabel}`);
+  }
+
+  lines.push("");
+  lines.push(`🔗 *رابط المنتج:* ${window.location.href}`);
+
+  if (imageUrl) {
+    lines.push(`🖼️ *صورة المنتج:* ${imageUrl}`);
+  }
+
+  return encodeURIComponent(lines.join("\n"));
+}
 
 const materialTone = {
   "بلاستيك": { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200" },
@@ -401,7 +431,7 @@ export default function ProductDetail() {
               )}
 
               <motion.a
-                href={`${WHATSAPP_BASE}${product.name}${hasCode ? ` (${product.code})` : ""}`}
+                href={`https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsappMessage(product, productImages[0])}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 whileHover={{ scale: 1.015 }}

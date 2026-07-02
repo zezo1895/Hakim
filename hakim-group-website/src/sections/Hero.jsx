@@ -4,7 +4,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { MessageCircle, ChevronDown, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const WHATSAPP = "https://wa.me/201234567890?text=أريد طلب تسعير جملة";
+const WHATSAPP = "https://wa.me/201144505575?text=أريد طلب تسعير جملة";
 
 // Reusable fade-up variant
 const fadeUp = (delay = 0) => ({
