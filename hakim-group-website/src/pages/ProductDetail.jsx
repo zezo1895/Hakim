@@ -12,10 +12,10 @@ import {
   MessageCircle,
   ZoomIn,
   X,
-  Loader2,
   ChevronRight,
   ChevronLeft as ChevronLeftIcon,
 } from "lucide-react";
+import Loader from "../components/Loader";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -165,14 +165,7 @@ export default function ProductDetail() {
 
   // عرض حالة التحميل
   if (loading) {
-    return (
-      <div dir="rtl" className="pt-32 pb-20 text-center min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-brand-blue mx-auto mb-4" />
-          <p className="text-gray-500">جاري تحميل المنتج...</p>
-        </div>
-      </div>
-    );
+    return <Loader label="جاري تحميل المنتج" />;
   }
 
   // عرض حالة الخطأ
@@ -444,7 +437,7 @@ export default function ProductDetail() {
             </motion.div>
           </div>
 
-          {/* ===== أصناف مشابهة (تم التعديل هنا) ===== */}
+          {/* ===== أصناف مشابهة ===== */}
           {sameGroupProducts.length > 0 && (
             <div className="mt-16 pt-10 border-t border-gray-100">
               <div className="flex items-center gap-2 mb-5">
@@ -482,7 +475,6 @@ export default function ProductDetail() {
                       )}
                     </div>
                     <div className="p-4">
-                      {/* عرض اسم المنتج بدلاً من المقاس */}
                       <p className="text-sm font-bold text-gray-800 mb-1 line-clamp-1">{p.name}</p>
                       {p.code && (
                         <span className="font-mono text-[10px] text-gray-400">{p.code}</span>

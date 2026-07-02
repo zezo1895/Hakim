@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, Loader2, ZoomIn, Search, X } from "lucide-react";
+import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, ZoomIn, Search, X } from "lucide-react";
+import Loader from "../components/Loader";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -110,14 +111,7 @@ export default function Products() {
 
   // عرض حالة التحميل
   if (loading) {
-    return (
-      <div dir="rtl" className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-brand-blue mx-auto mb-4" />
-          <p className="text-gray-500">جاري تحميل المنتجات...</p>
-        </div>
-      </div>
-    );
+    return <Loader label="جاري تحميل المنتجات" />;
   }
 
   // عرض حالة الخطأ
