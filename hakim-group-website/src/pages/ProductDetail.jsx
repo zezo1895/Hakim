@@ -21,7 +21,7 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // ⚠️ غيّر الرقم ده برقم الواتساب بتاع الشركة (بصيغة دولية بدون + أو أصفار في الأول)
 // مثال لمصر: 201001234567
-const WHATSAPP_NUMBER = "201144505575";
+const WHATSAPP_NUMBER = "201234567890";
 
 // بناء رسالة تفصيلية كاملة عن المنتج (الاسم، الكود، الخامة، النوع، المقاس، الحرارة، رابط الصورة، ورابط صفحة المنتج)
 function buildWhatsappMessage(product, imageUrl) {
@@ -294,14 +294,14 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* معرض الصور المصغرة - محسن */}
+              {/* معرض الصور المصغرة - محسن (تلتف لسطر جديد بدل ما تخرج بره الكونتينر) */}
               {productImages.length > 1 && (
-                <div className="flex gap-3 mt-4 overflow-x-auto pb-2 px-1">
+                <div className="flex flex-wrap gap-3 mt-4 px-1">
                   {productImages.map((img, i) => (
                     <button
                       key={i}
                       onClick={() => setActiveImg(i)}
-                      className={`relative w-24 h-24 shrink-0 rounded-2xl overflow-hidden border-2 transition-all duration-200 ${
+                      className={`relative w-[calc(25%-0.5625rem)] sm:w-24 aspect-square shrink-0 rounded-2xl overflow-hidden border-2 transition-all duration-200 ${
                         activeImg === i
                           ? "border-brand-blue shadow-lg scale-105"
                           : "border-transparent opacity-60 hover:opacity-100 hover:scale-105"
@@ -437,7 +437,7 @@ export default function ProductDetail() {
             </motion.div>
           </div>
 
-          {/* ===== أصناف مشابهة ===== */}
+          {/* ===== أصناف مشابهة (تم التعديل هنا) ===== */}
           {sameGroupProducts.length > 0 && (
             <div className="mt-16 pt-10 border-t border-gray-100">
               <div className="flex items-center gap-2 mb-5">
@@ -475,6 +475,7 @@ export default function ProductDetail() {
                       )}
                     </div>
                     <div className="p-4">
+                      {/* عرض اسم المنتج بدلاً من المقاس */}
                       <p className="text-sm font-bold text-gray-800 mb-1 line-clamp-1">{p.name}</p>
                       {p.code && (
                         <span className="font-mono text-[10px] text-gray-400">{p.code}</span>
