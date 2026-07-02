@@ -116,7 +116,7 @@ export default function Footer() {
                   className="flex items-center gap-2 text-blue-200 text-sm hover:text-white transition-colors"
                 >
                   <Phone size={15} className="shrink-0 text-brand-greenBright" />
-                  <span>+079 9215370</span>
+                  <span>01144505575</span>
                 </a>
               </li>
               <li>
