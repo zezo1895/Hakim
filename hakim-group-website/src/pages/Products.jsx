@@ -2,10 +2,11 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, ZoomIn, Search, X } from "lucide-react";
+import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, ChevronRight, ZoomIn, Search, X } from "lucide-react";
 import Loader from "../components/Loader";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const ITEMS_PER_PAGE = 21;
 
 // حالة الحرارة: ساخن / بارد / يتحمل الاتنين
 function TempBadge({ temp }) {
@@ -54,6 +55,81 @@ function FilterRow({ label, options, active, onChange }) {
   );
 }
 
+// شريط الترقيم (Pagination)
+function Pagination({ currentPage, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null;
+
+  // نحدد أي أرقام نعرضها (نتجنب عرض 50 رقم لو الصفحات كتير جدًا)
+  const pages = [];
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  for (let i = start; i <= end; i++) pages.push(i);
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-10 flex-wrap" dir="ltr">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed hover:border-brand-blue hover:text-brand-blue transition-all"
+        aria-label="السابق"
+      >
+        <ChevronRight size={16} />
+      </button>
+
+      {start > 1 && (
+        <>
+          <button
+            onClick={() => onPageChange(1)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:border-brand-blue hover:text-brand-blue transition-all"
+          >
+            1
+          </button>
+          {start > 2 && <span className="text-gray-300 px-1">...</span>}
+        </>
+      )}
+
+      {pages.map((p) => (
+        <button
+          key={p}
+          onClick={() => onPageChange(p)}
+          className={`w-9 h-9 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+            p === currentPage
+              ? "bg-brand-blue text-white shadow"
+              : "border border-gray-200 text-gray-600 hover:border-brand-blue hover:text-brand-blue"
+          }`}
+        >
+          {p}
+        </button>
+      ))}
+
+      {end < totalPages && (
+        <>
+          {end < totalPages - 1 && <span className="text-gray-300 px-1">...</span>}
+          <button
+            onClick={() => onPageChange(totalPages)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:border-brand-blue hover:text-brand-blue transition-all"
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 text-gray-500 disabled:opacity-30 disabled:cursor-not-allowed hover:border-brand-blue hover:text-brand-blue transition-all"
+        aria-label="التالي"
+      >
+        <ChevronLeft size={16} />
+      </button>
+    </div>
+  );
+}
+
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +145,9 @@ export default function Products() {
   const [activeType, setActiveType] = useState("الكل");
   const [searchTerm, setSearchTerm] = useState("");
 
+  // الترقيم (Pagination)
+  const [currentPage, setCurrentPage] = useState(1);
+
   // قوائم الفئات والخامات والأنواع المستخرجة من البيانات
   const [categoriesList, setCategoriesList] = useState(["الكل"]);
   const [materialsList, setMaterialsList] = useState(["الكل"]);
@@ -78,6 +157,11 @@ export default function Products() {
   useEffect(() => {
     setActiveCategory(categoryFromUrl);
   }, [categoryFromUrl]);
+
+  // أي تغيير في الفلاتر أو البحث يرجّع الترقيم للصفحة الأولى تلقائيًا
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, activeMaterial, activeType, searchTerm]);
 
   // تغيير فلتر الفئة يحدّث الرابط كمان عشان يفضل قابل للمشاركة
   const handleCategoryChange = (c) => {
@@ -133,6 +217,21 @@ export default function Products() {
         p.name?.toLowerCase().includes(normalizedSearch) ||
         p.code?.toLowerCase().includes(normalizedSearch))
   );
+
+  // تقسيم النتائج المفلترة على صفحات (21 منتج لكل صفحة)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginated = filtered.slice(
+    (safePage - 1) * ITEMS_PER_PAGE,
+    safePage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    // نرجع لأعلى قائمة المنتجات (مش أعلى الصفحة كلها) عشان تجربة أنعم
+    document.getElementById("products-grid-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // عرض حالة التحميل
   if (loading) {
@@ -227,10 +326,12 @@ export default function Products() {
             </div>
           </div>
 
+          <div id="products-grid-top" />
+
           {/* Product grid */}
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence>
-              {filtered.map((p) => (
+              {paginated.map((p) => (
                 <motion.div
                   key={p.id}
                   layout
@@ -339,6 +440,13 @@ export default function Products() {
               </button>
             </div>
           )}
+
+          {/* شريط الترقيم */}
+          <Pagination
+            currentPage={safePage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         </div>
       </section>
     </div>
