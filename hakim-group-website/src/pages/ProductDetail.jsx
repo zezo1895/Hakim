@@ -21,7 +21,7 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 // ⚠️ غيّر الرقم ده برقم الواتساب بتاع الشركة (بصيغة دولية بدون + أو أصفار في الأول)
 // مثال لمصر: 201001234567
-const WHATSAPP_NUMBER = "201234567890";
+const WHATSAPP_NUMBER = "201144505575";
 
 // بناء رسالة تفصيلية كاملة عن المنتج (الاسم، الكود، الخامة، النوع، المقاس، الحرارة، رابط الصورة، ورابط صفحة المنتج)
 function buildWhatsappMessage(product, imageUrl) {

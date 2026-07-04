@@ -15,7 +15,7 @@ const navLinks = [
   { label: "اتصل بنا",         to: "/contact" },
 ];
 
-const WHATSAPP = "https://wa.me/201234567890?text=أريد طلب تسعير";
+const WHATSAPP = "https://wa.me/201144505575?text=أريد طلب تسعير";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);

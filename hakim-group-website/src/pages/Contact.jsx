@@ -3,7 +3,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Phone, Mail, MapPin, MessageCircle, Send } from "lucide-react";
 
-const WHATSAPP = "https://wa.me/201234567890?text=مرحباً، أريد التواصل مع فريق المبيعات";
+const WHATSAPP = "https://wa.me/201144505575?text=مرحباً، أريد التواصل مع فريق المبيعات";
 
 export default function Contact() {
   const [form, setForm] = useState({ name: "", company: "", phone: "", message: "" });
@@ -15,7 +15,7 @@ export default function Contact() {
     e.preventDefault();
     // In production: POST to your backend or EmailJS
     const msg = `مرحباً، أنا ${form.name} من شركة ${form.company}.\nرقم تواصل: ${form.phone}\n${form.message}`;
-    window.open(`https://wa.me/201234567890?text=${encodeURIComponent(msg)}`, "_blank");
+    window.open(`https://wa.me/201144505575?text=${encodeURIComponent(msg)}`, "_blank");
     setSent(true);
   };
 
