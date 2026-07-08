@@ -816,16 +816,15 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
     e.preventDefault();
     setSaving(true);
     try {
-      // ✅ الخطوة 1: لو في مجموعة جديدة، ننشئها باستخدام API المجموعات
+      // ✅ الخطوة 1: لو في مجموعة جديدة، ننشئها باستخدام apiFetch
       let finalGroupId = form.group_id;
       
       if (showNewGroup && newGroupName.trim()) {
-        // نستخدم fetch مباشرة مع الإعدادات المناسبة
-        const groupResponse = await fetch(`${API}/groups`, {
+        // استخدم apiFetch بدل fetch
+        const groupResponse = await apiFetch("/groups", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
-            "x-admin-secret": SECRET
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({ 
             name: newGroupName.trim() 
@@ -838,16 +837,13 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
         }
         
         const newGroup = await groupResponse.json();
-        finalGroupId = newGroup.id; // نأخذ ID المجموعة الجديدة
+        finalGroupId = newGroup.id;
       }
       
       // ✅ الخطوة 2: نجهز FormData للمنتج
       const fd = new FormData();
-      
-      // نضيف كل حقول المنتج ما عدا group_id
       Object.entries(form).forEach(([k, v]) => {
         if (k === 'group_id') {
-          // نستخدم ID المجموعة الجديد
           fd.append(k, finalGroupId || '');
         } else if (v !== null && v !== undefined && v !== '') {
           fd.append(k, v);
@@ -866,7 +862,6 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
       if (removeIds.length) fd.append("remove_image_ids", JSON.stringify(removeIds));
       newFiles.forEach((f) => fd.append("images", f));
 
-      // ✅ الخطوة 3: نضيف المنتج
       const url = editProduct ? `/${editProduct.id}` : "";
       const method = editProduct ? "PUT" : "POST";
       const res = await apiFetch(url, { method, body: fd });
@@ -879,7 +874,6 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
       onSaved(editProduct ? "تم التحديث ✓" : "تمت الإضافة ✓");
       onClose();
       
-      // ✅ تحديث البيانات
       if (window.refreshAdminData && typeof window.refreshAdminData === 'function') {
         window.refreshAdminData();
       }
@@ -1217,9 +1211,6 @@ export default function Admin() {
   const [filterType,     setFilterType]     = useState("");
   const [sortMode,       setSortMode]       = useState(false);
   const [savingOrder,    setSavingOrder]    = useState(false);
-  // المجموعات المختارة للترتيب دلوقتي (بنفس فكرة صندوق اختيار المجموعات فى /tv-config)
-  // بس هنا مجرد "بؤرة تركيز" — أي مجموعة متختارتش بتفضل موجودة وبترتيبها زي ما هي،
-  // مجرد مش ظاهرة فى الكروت دلوقتي عشان تركز على اللي انت شغال عليه.
   const [selectedGroupIds, setSelectedGroupIds] = useState(() => {
     try {
       const raw = localStorage.getItem("hakim_admin_order_groups_v1");
@@ -1234,11 +1225,6 @@ export default function Admin() {
 
   const notify = useCallback((msg, type = "success") => setToast({ msg, type }), []);
 
-  // ── ترتيب المنتجات فى الموقع — بنفس فكرة شاشة العرض بالظبط:
-  //    1) رتّب المجموعات نفسها (بلوك كامل بيتحرك فوق/تحت).
-  //    2) وجوه كل مجموعة رتّب المقاسات (المنتجات) اللي فيها.
-  //    كل حركة بتتحفظ فورًا فى الداتابيز، ونفس الترتيب ده هو اللي هيظهر بيه
-  //    المنتج فى صفحة "منتجاتنا" بالموقع العادي. ──
   const persistOrder = useCallback((nextProducts) => {
     setProducts(nextProducts);
     setSavingOrder(true);
@@ -1252,7 +1238,6 @@ export default function Admin() {
       .finally(() => setSavingOrder(false));
   }, [notify]);
 
-  // بيبني بلوكات المجموعات بنفس ترتيب ظهورها الحالي فى المنتجات
   const buildGroupBlocks = useCallback((list) => {
     const order = [];
     const map = new Map();
@@ -1264,9 +1249,6 @@ export default function Admin() {
     return { order, map };
   }, []);
 
-  // بيحسب الترتيب الكامل الجديد: المجموعات المختارة الأول بالترتيب اللي
-  // اختاره الأدمن، وبعدين كل اللي فاضل (مجموعات تانية + بدون مجموعة) بنفس
-  // ترتيبهم النسبي الحالي من غير ما نلمسهم — وبيحفظه فورًا فى الداتابيز.
   const reorderBySelectedGroups = useCallback((selected) => {
     const { map } = buildGroupBlocks(products);
     const front = selected.flatMap((gid) => map.get(gid) || []);
@@ -1374,10 +1356,8 @@ export default function Admin() {
 
   const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
 
-  // كل بلوكات المجموعات الموجودة فعليًا فى المنتجات دلوقتي (مصدر العدّادات والصور)
   const allGroupBlocks = useMemo(() => buildGroupBlocks(products), [products, buildGroupBlocks]);
 
-  // البلوكات الظاهرة فى الكروت تحت — بس المجموعات اللي الأدمن اختارها، وبنفس ترتيب اختياره
   const groupBlocksView = useMemo(() => {
     return selectedGroupIds.map((gid) => ({
       gid,
@@ -1386,8 +1366,6 @@ export default function Admin() {
     }));
   }, [selectedGroupIds, groupsById, allGroupBlocks]);
 
-  // كل المجموعات المتاحة للإضافة (اللي لسه متختارتش) — نفس شكل صندوق
-  // المجموعات فى /tv-config بالظبط
   const availableGroupChips = useMemo(() => {
     const chips = groups
       .filter((g) => !selectedGroupIds.includes(g.id))
@@ -1509,7 +1487,6 @@ export default function Admin() {
               <Layers size={15} /> المجموعات ({selectedGroupIds.length} مختارة)
             </h3>
 
-            {/* المجموعات المختارة - مرتبة */}
             {selectedGroupIds.length > 0 && (
               <div className="space-y-1.5 mb-4">
                 {selectedGroupIds.map((gid, idx) => {
@@ -1556,7 +1533,6 @@ export default function Admin() {
               </div>
             )}
 
-            {/* المجموعات المتاحة لإضافتها */}
             <div className="flex flex-wrap gap-2">
               {availableGroupChips.map((g) => (
                 <button
