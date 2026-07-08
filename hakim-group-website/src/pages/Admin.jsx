@@ -816,12 +816,45 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
     e.preventDefault();
     setSaving(true);
     try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      if (showNewGroup && newGroupName.trim())
-        fd.append("new_group_name", newGroupName.trim());
+      // ✅ الخطوة 1: لو في مجموعة جديدة، ننشئها باستخدام API المجموعات
+      let finalGroupId = form.group_id;
       
-      // إرسال الأغطية - عادية ويدوية
+      if (showNewGroup && newGroupName.trim()) {
+        // نستخدم fetch مباشرة مع الإعدادات المناسبة
+        const groupResponse = await fetch(`${API}/groups`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-admin-secret": SECRET
+          },
+          body: JSON.stringify({ 
+            name: newGroupName.trim() 
+          })
+        });
+        
+        if (!groupResponse.ok) {
+          const errorData = await groupResponse.json();
+          throw new Error(errorData.error || "فشل إنشاء المجموعة");
+        }
+        
+        const newGroup = await groupResponse.json();
+        finalGroupId = newGroup.id; // نأخذ ID المجموعة الجديدة
+      }
+      
+      // ✅ الخطوة 2: نجهز FormData للمنتج
+      const fd = new FormData();
+      
+      // نضيف كل حقول المنتج ما عدا group_id
+      Object.entries(form).forEach(([k, v]) => {
+        if (k === 'group_id') {
+          // نستخدم ID المجموعة الجديد
+          fd.append(k, finalGroupId || '');
+        } else if (v !== null && v !== undefined && v !== '') {
+          fd.append(k, v);
+        }
+      });
+      
+      // إرسال الأغطية
       const lidsToSend = selectedLids.map((l) => {
         if (l.isManual || l.manual) {
           return { name: l.name, manual: true };
@@ -833,15 +866,20 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
       if (removeIds.length) fd.append("remove_image_ids", JSON.stringify(removeIds));
       newFiles.forEach((f) => fd.append("images", f));
 
-      const url    = editProduct ? `/${editProduct.id}` : "";
+      // ✅ الخطوة 3: نضيف المنتج
+      const url = editProduct ? `/${editProduct.id}` : "";
       const method = editProduct ? "PUT" : "POST";
-      const res    = await apiFetch(url, { method, body: fd });
+      const res = await apiFetch(url, { method, body: fd });
 
-      if (!res.ok) throw new Error((await res.json()).error);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "حدث خطأ");
+      }
+      
       onSaved(editProduct ? "تم التحديث ✓" : "تمت الإضافة ✓");
       onClose();
       
-      // تحديث البيانات بعد الحفظ الناجح
+      // ✅ تحديث البيانات
       if (window.refreshAdminData && typeof window.refreshAdminData === 'function') {
         window.refreshAdminData();
       }
