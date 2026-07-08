@@ -23,6 +23,18 @@ exports.getAll = async (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+// إعادة ترتيب المنتجات — بياخد { order: [id1, id2, id3, ...] } بالترتيب الجديد
+exports.reorder = async (req, res) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ error: "order (array of ids) required" });
+    }
+    await model.reorder(order.map(Number));
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 exports.getOne = async (req, res) => {
   try {
     const product = await model.getById(req.params.id);

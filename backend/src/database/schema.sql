@@ -48,6 +48,7 @@ CREATE TABLE products (
   group_id    INT DEFAULT NULL,
   size        VARCHAR(100),
   notes       TEXT,
+  sort_order  INT NOT NULL DEFAULT 0,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (type_id)     REFERENCES product_types(id)     ON DELETE SET NULL,

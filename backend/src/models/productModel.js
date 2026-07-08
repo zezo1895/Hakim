@@ -34,7 +34,9 @@ const parse = (r) => r ? { ...r, images: parseImages(r.raw_images) } : null;
 
 // ── Reads ──────────────────────────────────────────────────
 exports.getAll = async () => {
-  const [rows] = await db.query(`${BASE_SELECT} GROUP BY p.id ORDER BY p.created_at DESC`);
+  const [rows] = await db.query(
+    `${BASE_SELECT} GROUP BY p.id ORDER BY p.sort_order ASC, p.created_at DESC`
+  );
   return rows.map(parse);
 };
 
@@ -145,12 +147,28 @@ exports.searchLids = async (q) => {
 };
 
 // ── Write ──────────────────────────────────────────────────
-exports.create = (d) => db.query(
-  `INSERT INTO products (name, code, type_id, material_id, temp, group_id, size, notes)
-   VALUES (?,?,?,?,?,?,?,?)`,
-  [d.name, d.code||null, d.type_id||null, d.material_id||null,
-   d.temp, d.group_id||null, d.size||null, d.notes||null]
-);
+exports.create = async (d) => {
+  // منتج جديد يتحط آخر الترتيب افتراضيًا (مش هيقلب ترتيب حد)
+  const [[{ maxOrder } = { maxOrder: 0 }]] = await db.query(
+    "SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM products"
+  );
+  return db.query(
+    `INSERT INTO products (name, code, type_id, material_id, temp, group_id, size, notes, sort_order)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+    [d.name, d.code||null, d.type_id||null, d.material_id||null,
+     d.temp, d.group_id||null, d.size||null, d.notes||null, maxOrder + 1]
+  );
+};
+
+// إعادة ترتيب المنتجات دفعة واحدة — بياخد مصفوفة IDs بالترتيب الجديد المطلوب
+exports.reorder = async (orderedIds) => {
+  if (!Array.isArray(orderedIds) || !orderedIds.length) return;
+  const cases = orderedIds.map((id, i) => `WHEN ${db.escape(id)} THEN ${i}`).join(" ");
+  const ids = orderedIds.map((id) => db.escape(id)).join(",");
+  await db.query(
+    `UPDATE products SET sort_order = CASE id ${cases} END WHERE id IN (${ids})`
+  );
+};
 
 exports.update = (id, d) => db.query(
   `UPDATE products SET name=?,code=?,type_id=?,material_id=?,temp=?,

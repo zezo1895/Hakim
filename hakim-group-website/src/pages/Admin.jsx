@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
+import { grantTVAccess } from "../components/TVGate";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Trash2, Pencil, X, Upload, Search,
   Loader2, CheckCircle2, AlertCircle, Package,
   Settings, ChevronDown, ChevronRight, Tag,
+  ListOrdered, ChevronUp, GripVertical, Lock,
+  Tv, MonitorPlay, Layers, EyeOff,
 } from "lucide-react";
 
 const API    = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -34,6 +37,119 @@ const TEMPS = [
   { value: "cold", label: "❄️ بارد" },
   { value: "both", label: "✅ الاتنين" },
 ];
+
+// ─────────────────────────────────────────────────────────────
+// ترتيب المنتجات فى الموقع — بنفس بالظبط تصميم كروت الترتيب
+// المستخدم فى /tv-config (كارت مدور، صورة مصغّرة، سطر بيانات، وأزرار
+// فوق/تحت) بدل شكل الجدول، عشان الصفحتين يبقوا متطابقين شكليًا ومنطقيًا.
+// ─────────────────────────────────────────────────────────────
+function OrderProductRow({ p, index, total, onMove, groupLabel }) {
+  const thumb = p.images?.[0]?.url || p.images?.[0];
+  const tempLabel = p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد";
+  const tempColor =
+    p.temp === "hot" ? "text-orange-500" : p.temp === "cold" ? "text-sky-500" : "text-emerald-600";
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 border border-gray-100 bg-white hover:border-brand-blue/20 transition-colors">
+      <span className="w-6 text-xs font-black text-gray-300 shrink-0 text-center">{index + 1}</span>
+      <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-100 shrink-0 overflow-hidden flex items-center justify-center">
+        {thumb ? (
+          <img src={thumb} alt="" className="w-full h-full object-contain p-1" />
+        ) : (
+          <span className="text-[9px] text-gray-300">لا صورة</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-gray-800 truncate">{p.name}</p>
+        <p className="text-xs text-gray-400 truncate flex items-center gap-1.5">
+          {[p.code, p.size].filter(Boolean).join(" · ")}
+          <span className={`font-bold ${tempColor}`}>· {tempLabel}</span>
+        </p>
+      </div>
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          onClick={() => onMove(p.id, -1)}
+          disabled={index === 0}
+          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-20 transition-colors"
+          title={`لأعلى داخل ${groupLabel}`}
+        >
+          <ChevronUp size={16} />
+        </button>
+        <button
+          onClick={() => onMove(p.id, 1)}
+          disabled={index === total - 1}
+          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-20 transition-colors"
+          title={`لأسفل داخل ${groupLabel}`}
+        >
+          <ChevronDown size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GroupedOrderCards({ groupBlocksView, moveGroup, moveProductInGroup, search }) {
+  const q = search.trim().toLowerCase();
+  const matches = (p) =>
+    !q || p.name?.toLowerCase().includes(q) || p.code?.toLowerCase().includes(q);
+
+  return (
+    <div className="space-y-4">
+      {groupBlocksView.map((block, gIdx) => {
+        const visibleProducts = block.products.filter(matches);
+        if (q && visibleProducts.length === 0) return null;
+        return (
+          <div key={block.gid} className="bg-white rounded-2xl border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-3 bg-brand-blueLight/50 border border-brand-blue/10 rounded-xl px-3 py-2">
+              <span className="w-6 h-6 rounded-full bg-brand-blue text-white text-xs font-black flex items-center justify-center shrink-0">
+                {gIdx + 1}
+              </span>
+              <Layers size={14} className="text-brand-blue shrink-0" />
+              <span className="flex-1 text-sm font-extrabold text-brand-blue truncate">{block.label}</span>
+              <span className="text-xs text-brand-blue/50 font-semibold shrink-0">
+                {block.products.length} منتج
+              </span>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <button
+                  onClick={() => moveGroup(block.gid, -1)}
+                  disabled={gIdx === 0}
+                  className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors text-brand-blue"
+                  title="نقل المجموعة لأعلى"
+                >
+                  <ChevronUp size={15} />
+                </button>
+                <button
+                  onClick={() => moveGroup(block.gid, 1)}
+                  disabled={gIdx === groupBlocksView.length - 1}
+                  className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors text-brand-blue"
+                  title="نقل المجموعة لأسفل"
+                >
+                  <ChevronDown size={15} />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              {visibleProducts.map((p) => {
+                const realIdx = block.products.findIndex((x) => x.id === p.id);
+                return (
+                  <OrderProductRow
+                    key={p.id}
+                    p={p}
+                    index={realIdx}
+                    total={block.products.length}
+                    onMove={moveProductInGroup}
+                    groupLabel={block.label}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────
 // Toast
@@ -977,17 +1093,72 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
   );
 }
 
+const ADMIN_AUTH_KEY = "hakim_admin_ok";
+
+// ─────────────────────────────────────────────────────────────
+// شاشة الدخول — بتظهر أول ما تفتح /admin من غير ما تكون مسجل دخول
+// ─────────────────────────────────────────────────────────────
+function AdminLogin({ onSuccess }) {
+  const [input, setInput] = useState("");
+  const [error, setError] = useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (SECRET && input === SECRET) {
+      localStorage.setItem(ADMIN_AUTH_KEY, "1");
+      onSuccess();
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-brand-blue flex items-center justify-center px-6" dir="rtl">
+      <form
+        onSubmit={submit}
+        className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-2xl text-center"
+      >
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-5">
+          <Lock size={22} className="text-brand-blue" />
+        </div>
+        <h1 className="text-gray-800 font-black text-xl mb-1">لوحة تحكم حكيم جروب</h1>
+        <p className="text-gray-400 text-sm mb-6">ادخل كود الدخول للمتابعة</p>
+        <input
+          type="password"
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setError(false); }}
+          placeholder="كود الدخول"
+          dir="ltr"
+          className={`w-full text-center border rounded-2xl py-3 px-4 outline-none mb-3 transition-colors
+            ${error ? "border-red-400 focus:border-red-400" : "border-gray-200 focus:border-brand-blue"}`}
+          autoFocus
+        />
+        {error && <p className="text-red-500 text-xs mb-3 font-bold">الكود غلط، حاول تاني.</p>}
+        <button
+          type="submit"
+          className="w-full py-3 rounded-2xl bg-brand-blue text-white font-bold hover:opacity-90 transition"
+        >
+          دخول
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // Main Admin Page
 // ─────────────────────────────────────────────────────────────
 export default function Admin() {
-  const [params]   = useSearchParams();
-  const navigate   = useNavigate();
-  const secret     = params.get("secret");
+  const [params] = useSearchParams();
 
-  useEffect(() => {
-    if (!secret || secret !== SECRET) navigate("/", { replace: true });
-  }, [secret, navigate]);
+  const [authed, setAuthed] = useState(() => {
+    const fromUrl = params.get("secret");
+    if (fromUrl && SECRET && fromUrl === SECRET) {
+      localStorage.setItem(ADMIN_AUTH_KEY, "1");
+      return true;
+    }
+    return localStorage.getItem(ADMIN_AUTH_KEY) === "1";
+  });
 
   const [products,       setProducts]       = useState([]);
   const [types,          setTypes]          = useState([]);
@@ -1001,8 +1172,96 @@ export default function Admin() {
   const [showSettings,   setShowSettings]   = useState(false);
   const [search,         setSearch]         = useState("");
   const [filterType,     setFilterType]     = useState("");
+  const [sortMode,       setSortMode]       = useState(false);
+  const [savingOrder,    setSavingOrder]    = useState(false);
+  // المجموعات المختارة للترتيب دلوقتي (بنفس فكرة صندوق اختيار المجموعات فى /tv-config)
+  // بس هنا مجرد "بؤرة تركيز" — أي مجموعة متختارتش بتفضل موجودة وبترتيبها زي ما هي،
+  // مجرد مش ظاهرة فى الكروت دلوقتي عشان تركز على اللي انت شغال عليه.
+  const [selectedGroupIds, setSelectedGroupIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem("hakim_admin_order_groups_v1");
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem("hakim_admin_order_groups_v1", JSON.stringify(selectedGroupIds)); }
+    catch { /* تجاهل */ }
+  }, [selectedGroupIds]);
 
   const notify = useCallback((msg, type = "success") => setToast({ msg, type }), []);
+
+  // ── ترتيب المنتجات فى الموقع — بنفس فكرة شاشة العرض بالظبط:
+  //    1) رتّب المجموعات نفسها (بلوك كامل بيتحرك فوق/تحت).
+  //    2) وجوه كل مجموعة رتّب المقاسات (المنتجات) اللي فيها.
+  //    كل حركة بتتحفظ فورًا فى الداتابيز، ونفس الترتيب ده هو اللي هيظهر بيه
+  //    المنتج فى صفحة "منتجاتنا" بالموقع العادي. ──
+  const persistOrder = useCallback((nextProducts) => {
+    setProducts(nextProducts);
+    setSavingOrder(true);
+    apiFetch("/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order: nextProducts.map((p) => p.id) }),
+    })
+      .then((res) => { if (!res.ok) notify("فشل حفظ الترتيب", "error"); })
+      .catch(() => notify("فشل حفظ الترتيب — تحقق من الاتصال", "error"))
+      .finally(() => setSavingOrder(false));
+  }, [notify]);
+
+  // بيبني بلوكات المجموعات بنفس ترتيب ظهورها الحالي فى المنتجات
+  const buildGroupBlocks = useCallback((list) => {
+    const order = [];
+    const map = new Map();
+    list.forEach((p) => {
+      const g = p.group_id ?? "none";
+      if (!map.has(g)) { map.set(g, []); order.push(g); }
+      map.get(g).push(p);
+    });
+    return { order, map };
+  }, []);
+
+  // بيحسب الترتيب الكامل الجديد: المجموعات المختارة الأول بالترتيب اللي
+  // اختاره الأدمن، وبعدين كل اللي فاضل (مجموعات تانية + بدون مجموعة) بنفس
+  // ترتيبهم النسبي الحالي من غير ما نلمسهم — وبيحفظه فورًا فى الداتابيز.
+  const reorderBySelectedGroups = useCallback((selected) => {
+    const { map } = buildGroupBlocks(products);
+    const front = selected.flatMap((gid) => map.get(gid) || []);
+    const frontIds = new Set(front.map((p) => p.id));
+    const rest = products.filter((p) => !frontIds.has(p.id));
+    persistOrder([...front, ...rest]);
+  }, [products, buildGroupBlocks, persistOrder]);
+
+  const toggleGroupSelect = useCallback((gid) => {
+    const next = selectedGroupIds.includes(gid)
+      ? selectedGroupIds.filter((x) => x !== gid)
+      : [...selectedGroupIds, gid];
+    setSelectedGroupIds(next);
+    reorderBySelectedGroups(next);
+  }, [selectedGroupIds, reorderBySelectedGroups]);
+
+  const moveSelectedGroup = useCallback((gid, dir) => {
+    const i = selectedGroupIds.indexOf(gid);
+    const j = i + dir;
+    if (i === -1 || j < 0 || j >= selectedGroupIds.length) return;
+    const next = [...selectedGroupIds];
+    [next[i], next[j]] = [next[j], next[i]];
+    setSelectedGroupIds(next);
+    reorderBySelectedGroups(next);
+  }, [selectedGroupIds, reorderBySelectedGroups]);
+
+  const moveProductInGroup = useCallback((id, dir) => {
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    const gid = p.group_id ?? "none";
+    const { order, map } = buildGroupBlocks(products);
+    const arr = map.get(gid);
+    const i = arr.findIndex((x) => x.id === id);
+    const j = i + dir;
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    persistOrder(order.flatMap((g) => map.get(g)));
+  }, [products, buildGroupBlocks, persistOrder]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1043,10 +1302,10 @@ export default function Admin() {
   }, [notify]);
 
   useEffect(() => {
-    if (secret === SECRET) {
+    if (authed) {
       load();
     }
-  }, [load, secret]);
+  }, [load, authed]);
 
   const openEdit = async (p) => {
     const res  = await apiFetch(`/${p.id}`);
@@ -1062,13 +1321,41 @@ export default function Admin() {
     setDeleteId(null);
   };
 
-  const filtered = Array.isArray(products) ? products.filter((p) => {
-    const matchS = !search || p.name.includes(search) || p.code?.includes(search);
-    const matchT = !filterType || p.type_id === Number(filterType);
-    return matchS && matchT;
-  }) : [];
+  const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
 
-  if (!secret || secret !== SECRET) return null;
+  // كل بلوكات المجموعات الموجودة فعليًا فى المنتجات دلوقتي (مصدر العدّادات والصور)
+  const allGroupBlocks = useMemo(() => buildGroupBlocks(products), [products, buildGroupBlocks]);
+
+  // البلوكات الظاهرة فى الكروت تحت — بس المجموعات اللي الأدمن اختارها، وبنفس ترتيب اختياره
+  const groupBlocksView = useMemo(() => {
+    return selectedGroupIds.map((gid) => ({
+      gid,
+      label: gid === "none" ? "بدون مجموعة" : (groupsById.get(gid)?.name || "مجموعة محذوفة"),
+      products: allGroupBlocks.map.get(gid) || [],
+    }));
+  }, [selectedGroupIds, groupsById, allGroupBlocks]);
+
+  // كل المجموعات المتاحة للإضافة (اللي لسه متختارتش) — نفس شكل صندوق
+  // المجموعات فى /tv-config بالظبط
+  const availableGroupChips = useMemo(() => {
+    const chips = groups
+      .filter((g) => !selectedGroupIds.includes(g.id))
+      .map((g) => ({ gid: g.id, name: g.name, count: allGroupBlocks.map.get(g.id)?.length || 0 }));
+    if (allGroupBlocks.map.has("none") && !selectedGroupIds.includes("none")) {
+      chips.push({ gid: "none", name: "بدون مجموعة", count: allGroupBlocks.map.get("none").length });
+    }
+    return chips;
+  }, [groups, selectedGroupIds, allGroupBlocks]);
+
+  const filtered = sortMode
+    ? (Array.isArray(products) ? products : [])
+    : (Array.isArray(products) ? products.filter((p) => {
+        const matchS = !search || p.name.includes(search) || p.code?.includes(search);
+        const matchT = !filterType || p.type_id === Number(filterType);
+        return matchS && matchT;
+      }) : []);
+
+  if (!authed) return <AdminLogin onSuccess={() => setAuthed(true)} />;
 
   return (
     <div dir="rtl" className="pt-20 min-h-screen bg-gray-50">
@@ -1078,7 +1365,27 @@ export default function Admin() {
             <h1 className="text-2xl font-black">🛠️ لوحة تحكم المنتجات</h1>
             <p className="text-blue-200 text-sm mt-1">{Array.isArray(products) ? products.length : 0} منتج</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { grantTVAccess(); window.open("/tv-config", "_blank"); }}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border border-white/30 text-white hover:bg-white/10 transition">
+              <Settings size={15} />
+              إعدادات شاشة العرض
+            </button>
+            <button
+              onClick={() => { grantTVAccess(); window.open("/tv", "_blank"); }}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-white/15 border border-white/30 text-white hover:bg-white/25 transition">
+              <Tv size={15} />
+              فتح شاشة العرض
+            </button>
+            <button onClick={() => { setSortMode((v) => !v); setShowSettings(false); }}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border transition
+                ${sortMode
+                  ? "bg-white text-brand-blue border-white"
+                  : "border-white/30 text-white hover:bg-white/10"}`}>
+              <ListOrdered size={15} />
+              {sortMode ? "تم — رجوع للعرض العادي" : "ترتيب المنتجات فى الموقع"}
+            </button>
             <button onClick={() => setShowSettings((v) => !v)}
               className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border transition
                 ${showSettings
@@ -1095,6 +1402,21 @@ export default function Admin() {
             </button>
           </div>
         </div>
+        <p className="max-w-7xl mx-auto mt-3 text-blue-200/70 text-xs flex items-center gap-1.5">
+          <MonitorPlay size={13} />
+          شاشة العرض محجوبة عن أي حد — بتتفتح بس من الزرارين دول.
+        </p>
+        {sortMode && (
+          <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 text-blue-100 text-xs bg-white/10 rounded-xl px-4 py-2.5">
+            <GripVertical size={14} className="shrink-0" />
+            <span>
+              اختار المجموعات اللي عايز ترتبها من الصندوق تحت، رتّبها هي والمقاسات اللي جواها
+              — بالظبط زي ترتيب شاشة العرض. كل حركة بتتحفظ فورًا وبتنعكس على صفحة "منتجاتنا"
+              بالموقع مباشرة.
+              {savingOrder && <span className="mr-2 font-bold">جارِ الحفظ...</span>}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
@@ -1120,18 +1442,109 @@ export default function Admin() {
               className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-brand-blue/30" />
           </div>
-          <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-            className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
-                       focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
-            <option value="">كل الأنواع</option>
-            {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+          {!sortMode && (
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+              className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
+                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
+              <option value="">كل الأنواع</option>
+              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          )}
         </div>
+
+        {sortMode && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Layers size={15} /> المجموعات ({selectedGroupIds.length} مختارة)
+            </h3>
+
+            {/* المجموعات المختارة - مرتبة */}
+            {selectedGroupIds.length > 0 && (
+              <div className="space-y-1.5 mb-4">
+                {selectedGroupIds.map((gid, idx) => {
+                  const label = gid === "none" ? "بدون مجموعة" : (groupsById.get(gid)?.name || "مجموعة محذوفة");
+                  const count = allGroupBlocks.map.get(gid)?.length || 0;
+                  return (
+                    <div
+                      key={gid}
+                      className="flex items-center gap-2 bg-brand-blueLight/60 border border-brand-blue/10 rounded-xl px-3 py-2"
+                    >
+                      <span className="w-6 h-6 rounded-full bg-brand-blue text-white text-xs font-black flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+                      <span className="flex-1 text-sm font-bold text-gray-700 truncate">{label}</span>
+                      <span className="text-xs text-gray-400 shrink-0">{count} منتج</span>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          onClick={() => moveSelectedGroup(gid, -1)}
+                          disabled={idx === 0}
+                          className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors"
+                          title="نقل المجموعة لأعلى"
+                        >
+                          <ChevronUp size={15} />
+                        </button>
+                        <button
+                          onClick={() => moveSelectedGroup(gid, 1)}
+                          disabled={idx === selectedGroupIds.length - 1}
+                          className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors"
+                          title="نقل المجموعة لأسفل"
+                        >
+                          <ChevronDown size={15} />
+                        </button>
+                        <button
+                          onClick={() => toggleGroupSelect(gid)}
+                          className="p-1 rounded-lg hover:bg-red-50 text-red-400 transition-colors"
+                          title="إخفاء من هذه الجلسة (بيفضل مكانه فى الترتيب زي ما هو)"
+                        >
+                          <EyeOff size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* المجموعات المتاحة لإضافتها */}
+            <div className="flex flex-wrap gap-2">
+              {availableGroupChips.map((g) => (
+                <button
+                  key={g.gid}
+                  onClick={() => toggleGroupSelect(g.gid)}
+                  className="px-3.5 py-2 rounded-xl text-sm font-semibold bg-gray-50 text-gray-500 border border-gray-100 hover:border-brand-blue/30 hover:text-brand-blue transition-colors"
+                >
+                  + {g.name} <span className="text-gray-300">({g.count})</span>
+                </button>
+              ))}
+              {availableGroupChips.length === 0 && selectedGroupIds.length === 0 && (
+                <p className="text-sm text-gray-400">لا توجد مجموعات فى قاعدة البيانات.</p>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 leading-relaxed">
+              اختار المجموعة اللي عايز ترتبها دلوقتي، رتّبها هي والمقاسات اللي جواها، وكل
+              حركة بتتحفظ فورًا. أي مجموعة مش مختارة بتفضل فى مكانها فى الموقع زي ما هي.
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 size={32} className="animate-spin text-brand-blue" />
           </div>
+        ) : sortMode ? (
+          groupBlocksView.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-100">
+              <Layers size={40} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm">اختر مجموعة واحدة على الأقل من الأعلى عشان تبدأ الترتيب</p>
+            </div>
+          ) : (
+            <GroupedOrderCards
+              groupBlocksView={groupBlocksView}
+              moveGroup={moveSelectedGroup}
+              moveProductInGroup={moveProductInGroup}
+              search={search}
+            />
+          )
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
@@ -1147,52 +1560,52 @@ export default function Admin() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-4 py-3">
-                        {p.images?.[0]?.url
-                          ? <img src={p.images[0].url} className="w-11 h-11 object-cover rounded-xl" />
-                          : <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center">
-                              <Package size={18} className="text-gray-300" />
-                            </div>}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-gray-800 max-w-[180px] truncate">
-                        {p.name}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-gray-500 text-xs">{p.code || "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
-                          {p.type_name}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {p.material_name
-                          ? <><span className="font-mono font-bold">{p.material_name}</span>
-                            <span className="text-gray-400"> / {p.material_category}</span></>
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">{p.size || "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-bold
-                          ${p.temp === "hot" ? "text-orange-500"
-                          : p.temp === "cold" ? "text-sky-500"
-                          : "text-emerald-600"}`}>
-                          {p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => openEdit(p)}
-                            className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-brand-blue transition-colors">
-                            <Pencil size={15} />
-                          </button>
-                          <button onClick={() => setDeleteId(p.id)}
-                            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                      <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
+                        <td className="px-4 py-3">
+                          {p.images?.[0]?.url
+                            ? <img src={p.images[0].url} className="w-11 h-11 object-cover rounded-xl" />
+                            : <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center">
+                                <Package size={18} className="text-gray-300" />
+                              </div>}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-gray-800 max-w-[180px] truncate">
+                          {p.name}
+                        </td>
+                        <td className="px-4 py-3 font-mono text-gray-500 text-xs">{p.code || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
+                            {p.type_name}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {p.material_name
+                            ? <><span className="font-mono font-bold">{p.material_name}</span>
+                              <span className="text-gray-400"> / {p.material_category}</span></>
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">{p.size || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`text-xs font-bold
+                            ${p.temp === "hot" ? "text-orange-500"
+                            : p.temp === "cold" ? "text-sky-500"
+                            : "text-emerald-600"}`}>
+                            {p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openEdit(p)}
+                              className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-brand-blue transition-colors">
+                              <Pencil size={15} />
+                            </button>
+                            <button onClick={() => setDeleteId(p.id)}
+                              className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
               {filtered.length === 0 && (

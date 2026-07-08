@@ -28,6 +28,7 @@ router.delete("/groups/:id",       adminAuth, lookupCtrl.groups.remove);
 // ── Products ─────────────────────────────────────────────
 router.get("/search",              ctrl.search);
 router.get("/search/lids",         ctrl.searchLids);
+router.put("/reorder",             adminAuth, ctrl.reorder);
 router.get("/",                    ctrl.getAll);
 router.get("/:id",                 ctrl.getOne);
 router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
