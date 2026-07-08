@@ -39,7 +39,7 @@ const TEMPS = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-// ترتيب المنتجات فى الموقع — بنفس بالظبط تصميم كروت الترتيب
+// ترتيب المنتجات فى الموقع — بنفس بالضبط تصميم كروت الترتيب
 // المستخدم فى /tv-config (كارت مدور، صورة مصغّرة، سطر بيانات، وأزرار
 // فوق/تحت) بدل شكل الجدول، عشان الصفحتين يبقوا متطابقين شكليًا ومنطقيًا.
 // ─────────────────────────────────────────────────────────────
@@ -840,6 +840,11 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
       if (!res.ok) throw new Error((await res.json()).error);
       onSaved(editProduct ? "تم التحديث ✓" : "تمت الإضافة ✓");
       onClose();
+      
+      // تحديث البيانات بعد الحفظ الناجح
+      if (window.refreshAdminData && typeof window.refreshAdminData === 'function') {
+        window.refreshAdminData();
+      }
     } catch (err) {
       onSaved(err.message, "error");
     } finally {
@@ -1300,6 +1305,14 @@ export default function Admin() {
       setLoading(false);
     }
   }, [notify]);
+
+  // Expose load function globally
+  useEffect(() => {
+    window.refreshAdminData = load;
+    return () => {
+      delete window.refreshAdminData;
+    };
+  }, [load]);
 
   useEffect(() => {
     if (authed) {
