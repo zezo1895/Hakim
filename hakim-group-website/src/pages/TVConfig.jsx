@@ -1,16 +1,12 @@
 // src/pages/TVConfig.jsx
 // ============================================================================
 // إعدادات شاشة العرض (/tv-config)
-// صفحة تحكم مستقلة تمامًا — لا تُعدّل أي جزء من الموقع الأساسي.
-// من هنا تقدر تختار المجموعات، تستبعد منتجات، ترتب المجموعات والمنتجات،
-// تحدد توقيت كل صورة وتوقيت شاشة التفاصيل، ثم تشغّل شاشة العرض مباشرة.
+// نظام ترقيم يدوي للتحكم في ترتيب المنتجات والمجموعات - كتابة الرقم مباشرة
 // ============================================================================
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
-  ChevronUp,
-  ChevronDown,
   Eye,
   EyeOff,
   Search,
@@ -21,10 +17,25 @@ import {
   Layers,
   RotateCcw,
   ListOrdered,
+  Hash,
+  X,
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const STORAGE_KEY = "hakim_tv_config_v1";
+// ⚠️ لازم تطابق TRANSITION_DUR في backend/src/services/ffmpegVideoBuilder.js
+// عشان تقدير المدة يبقى دقيق مع الفيديو الفعلي اللي هيتولد
+const TRANSITION_DUR = 1.2;
+// الباك إند شغال على /api عادةً، والفيديوهات بترجع كرابط نسبي زي /videos/xxx.mp4
+// لازم نبنيه فوق دومين الباك إند نفسه (مش دومين الفرونت إند) عشان يفتح صح
+const BACKEND_ORIGIN = API.replace(/\/api\/?$/, "");
+
+function formatDuration(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
 
 function loadStored() {
   try {
@@ -51,6 +62,10 @@ export default function TVConfig() {
   const [copied, setCopied] = useState(false);
   const [restored, setRestored] = useState(false);
   const [loadError, setLoadError] = useState(null);
+
+  // ── States for video generation progress ──
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   // ── تحميل المنتجات والمجموعات ──
   useEffect(() => {
@@ -106,8 +121,7 @@ export default function TVConfig() {
       .map((p) => p.id);
   }, [mode, selectedGroupIds, allProducts]);
 
-  // ── توفيق productOrder مع النطاق الحالي: الحفاظ على ترتيب المستخدم،
-  //    إضافة أي منتجات جديدة دخلت النطاق، وحذف اللي خرجت منه ──
+  // ── توفيق productOrder مع النطاق الحالي ──
   useEffect(() => {
     if (!restored) return;
     setProductOrder((prev) => {
@@ -131,7 +145,7 @@ export default function TVConfig() {
   const productsById = useMemo(() => new Map(allProducts.map((p) => [p.id, p])), [allProducts]);
   const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
 
-  // عدد المنتجات لكل مجموعة (لعرضها بجانب اسمها)
+  // عدد المنتجات لكل مجموعة
   const groupCounts = useMemo(() => {
     const m = new Map();
     allProducts.forEach((p) => {
@@ -146,24 +160,116 @@ export default function TVConfig() {
     );
   };
 
-  const moveGroup = (id, dir) => {
+  // ── دالة توليد الفيديو مع مؤشر التقدم الحقيقي (مش مزيف) ──
+  const handleGenerateVideo = async () => {
+    if (finalOrder.length === 0) {
+      alert("لا يوجد منتجات لتوليد الفيديو");
+      return;
+    }
+
+    setIsGenerating(true);
+    setProgress(0);
+
+    const payload = {
+      order: finalOrder,
+      imgDur: imgDur,
+      detailDur: detailDur,
+      // musicUrl: "https://example.com/music.mp3"  // اختياري
+    };
+
+    try {
+      // 1) نبدأ عملية التوليد — الباك إند بيرجع jobId فورًا من غير ما يستنى الرندر يخلص
+      const startRes = await fetch(`${API}/video/render`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const startData = await startRes.json();
+
+      if (!startData.success || !startData.jobId) {
+        throw new Error(startData.error || "تعذر بدء عملية التوليد");
+      }
+
+      // 2) نسأل الباك إند كل نص ثانية عن نسبة التقدم الحقيقية لنفس الـ job
+      const jobId = startData.jobId;
+      const poll = () => {
+        setTimeout(async () => {
+          try {
+            const res = await fetch(`${API}/video/progress/${jobId}`);
+            if (!res.ok) throw new Error("تعذر متابعة تقدم التوليد");
+            const job = await res.json();
+
+            setProgress(job.progress ?? 0);
+
+            if (job.status === "done") {
+              setTimeout(() => {
+                alert(`✅ تم توليد الفيديو بنجاح!`);
+                const fullVideoUrl = job.videoUrl?.startsWith("http")
+                  ? job.videoUrl
+                  : `${BACKEND_ORIGIN}${job.videoUrl}`;
+                window.open(fullVideoUrl, "_blank");
+                setIsGenerating(false);
+                setProgress(0);
+              }, 400);
+            } else if (job.status === "error") {
+              setIsGenerating(false);
+              setProgress(0);
+              alert("❌ فشل في توليد الفيديو: " + job.error);
+            } else {
+              poll(); // لسه شغال، نسأل تاني بعد شوية
+            }
+          } catch (err) {
+            console.error(err);
+            setIsGenerating(false);
+            setProgress(0);
+            alert("حدث خطأ أثناء متابعة تقدم التوليد");
+          }
+        }, 500);
+      };
+      poll();
+    } catch (err) {
+      console.error(err);
+      setIsGenerating(false);
+      setProgress(0);
+      alert("حدث خطأ أثناء الاتصال بالسيرفر");
+    }
+  };
+
+
+  // ============================================================
+  // 🆕 دالة ترتيب المجموعات بالأرقام - كتابة مباشرة
+  // ============================================================
+  const updateGroupOrder = (id, newPosition) => {
     setSelectedGroupIds((prev) => {
-      const i = prev.indexOf(id);
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
+      const currentIndex = prev.indexOf(id);
+      if (currentIndex === -1) return prev;
+      
+      // نضمن أن الرقم بين 1 وعدد المجموعات
+      const newIndex = Math.max(0, Math.min(newPosition - 1, prev.length - 1));
+      
+      // إزالة العنصر وإدراجه في الموقع الجديد
       const copy = [...prev];
-      [copy[i], copy[j]] = [copy[j], copy[i]];
+      const [item] = copy.splice(currentIndex, 1);
+      copy.splice(newIndex, 0, item);
       return copy;
     });
   };
 
-  const moveProduct = (id, dir) => {
+  // ============================================================
+  // 🆕 دالة ترتيب المنتجات بالأرقام - كتابة مباشرة
+  // ============================================================
+  const updateProductOrder = (id, newPosition) => {
     setProductOrder((prev) => {
-      const i = prev.indexOf(id);
-      const j = i + dir;
-      if (j < 0 || j >= prev.length) return prev;
+      const currentIndex = prev.indexOf(id);
+      if (currentIndex === -1) return prev;
+      
+      // نضمن أن الرقم بين 1 وعدد المنتجات
+      const newIndex = Math.max(0, Math.min(newPosition - 1, prev.length - 1));
+      
+      // إزالة العنصر وإدراجه في الموقع الجديد
       const copy = [...prev];
-      [copy[i], copy[j]] = [copy[j], copy[i]];
+      const [item] = copy.splice(currentIndex, 1);
+      copy.splice(newIndex, 0, item);
       return copy;
     });
   };
@@ -183,7 +289,7 @@ export default function TVConfig() {
     setProductOrder(allProducts.map((p) => p.id));
   };
 
-  // ── القائمة المرئية (مفلترة بالبحث فقط للعرض، مش بتأثر على الترتيب الفعلي) ──
+  // ── القائمة المرئية (مفلترة بالبحث) ──
   const visibleProductOrder = useMemo(() => {
     if (!search.trim()) return productOrder;
     const q = search.trim().toLowerCase();
@@ -202,6 +308,21 @@ export default function TVConfig() {
     () => productOrder.filter((id) => !excludedIds.includes(id)),
     [productOrder, excludedIds]
   );
+
+  // ── تقدير دقيق لمدة الفيديو الفعلية (نفس منطق ffmpegVideoBuilder.js) ──
+  const estimatedDurationSec = useMemo(() => {
+    if (!finalOrder.length) return 0;
+    let rawTotal = 0;
+    let clipsCount = 0;
+    for (const id of finalOrder) {
+      const p = productsById.get(id);
+      const imagesCount = p?.images?.length ? p.images.length : 1;
+      rawTotal += imagesCount * imgDur + detailDur;
+      clipsCount += imagesCount + 1; // +1 لكارت التفاصيل
+    }
+    const transitions = Math.max(0, clipsCount - 1);
+    return Math.max(0, rawTotal - transitions * TRANSITION_DUR);
+  }, [finalOrder, productsById, imgDur, detailDur]);
 
   const tvUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -236,6 +357,91 @@ export default function TVConfig() {
           ⚠️ {loadError}
         </div>
       )}
+
+      {/* ============================================================
+          PROGRESS OVERLAY - Full screen fixed overlay
+          ============================================================ */}
+      {isGenerating && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center">
+          <div className="relative flex flex-col items-center justify-center p-8">
+            {/* Close button (optional, but we keep it for UX) */}
+            <button
+              onClick={() => {
+                if (window.confirm("هل تريد إلغاء عملية توليد الفيديو؟")) {
+                  setIsGenerating(false);
+                  setProgress(0);
+                }
+              }}
+              className="absolute top-4 right-4 text-white/60 hover:text-white/90 transition-colors p-2 rounded-full hover:bg-white/10"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Progress Circle */}
+            <div className="relative w-48 h-48">
+              {/* Background circle */}
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.1)"
+                  strokeWidth="8"
+                />
+                {/* Progress circle with gradient */}
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="52"
+                  fill="none"
+                  stroke="url(#progressGradient)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray="326.726"
+                  strokeDashoffset={326.726 - (progress / 100) * 326.726}
+                  className="transition-all duration-300 ease-out"
+                />
+                <defs>
+                  <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#7c3aed" />
+                    <stop offset="50%" stopColor="#8b5cf6" />
+                    <stop offset="100%" stopColor="#a78bfa" />
+                  </linearGradient>
+                </defs>
+              </svg>
+
+              {/* Percentage inside circle */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-5xl font-black text-white">
+                  {Math.round(progress)}%
+                </span>
+                <span className="text-xs text-white/60 mt-1 font-medium">جاري التوليد</span>
+              </div>
+            </div>
+
+            {/* Status message */}
+            <div className="mt-8 text-center">
+              <h3 className="text-xl font-bold text-white mb-2">
+                جاري توليد الفيديو...
+              </h3>
+              <p className="text-sm text-white/60">
+                عدد المنتجات: <span className="font-bold text-white/80">{finalOrder.length}</span>
+                {" · "}
+                المدة التقريبية: <span className="font-bold text-white/80">
+                  {formatDuration(estimatedDurationSec)}
+                </span>
+              </p>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse delay-150" />
+                <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse delay-300" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white border-b border-gray-100 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-4">
@@ -263,6 +469,26 @@ export default function TVConfig() {
             >
               {copied ? <Check size={16} className="text-brand-green" /> : <Copy size={16} />}
               {copied ? "تم النسخ" : "نسخ الرابط"}
+            </button>
+            <button
+              onClick={handleGenerateVideo}
+              disabled={isGenerating}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg ${
+                isGenerating
+                  ? "bg-gray-400 cursor-not-allowed opacity-60"
+                  : "bg-gradient-to-r from-violet-600 to-purple-600 hover:brightness-110 hover:shadow-violet-500/30"
+              }`}
+            >
+              {isGenerating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                  جاري التوليد...
+                </>
+              ) : (
+                <>
+                  🎬 توليد فيديو MP4
+                </>
+              )}
             </button>
             <a
               href={tvUrl}
@@ -314,14 +540,14 @@ export default function TVConfig() {
             </p>
           </div>
 
-          {/* اختيار وترتيب المجموعات */}
+          {/* اختيار وترتيب المجموعات - بالأرقام 🆕 كتابة مباشرة */}
           {mode === "groups" && (
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <Layers size={15} /> المجموعات ({selectedGroupIds.length} مختارة)
               </h3>
 
-              {/* المجموعات المختارة - مرتبة */}
+              {/* المجموعات المختارة - مرتبة بالأرقام */}
               {selectedGroupIds.length > 0 && (
                 <div className="space-y-1.5 mb-4">
                   {selectedGroupIds.map((gid, idx) => (
@@ -329,37 +555,36 @@ export default function TVConfig() {
                       key={gid}
                       className="flex items-center gap-2 bg-brand-blueLight/60 border border-brand-blue/10 rounded-xl px-3 py-2"
                     >
-                      <span className="w-6 h-6 rounded-full bg-brand-blue text-white text-xs font-black flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
+                      {/* 🆕 رقم الترتيب - كتابة مباشرة فقط */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Hash size={14} className="text-gray-400" />
+                        <input
+                          type="number"
+                          min="1"
+                          max={selectedGroupIds.length}
+                          value={idx + 1}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val >= 1 && val <= selectedGroupIds.length) {
+                              updateGroupOrder(gid, val);
+                            }
+                          }}
+                          className="w-12 h-8 text-center text-sm font-bold text-brand-blue bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                      </div>
+
                       <span className="flex-1 text-sm font-bold text-gray-700 truncate">
                         {groupsById.get(gid)?.name || `مجموعة #${gid}`}
                       </span>
                       <span className="text-xs text-gray-400 shrink-0">
                         {groupCounts.get(gid) || 0} منتج
                       </span>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <button
-                          onClick={() => moveGroup(gid, -1)}
-                          disabled={idx === 0}
-                          className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors"
-                        >
-                          <ChevronUp size={15} />
-                        </button>
-                        <button
-                          onClick={() => moveGroup(gid, 1)}
-                          disabled={idx === selectedGroupIds.length - 1}
-                          className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors"
-                        >
-                          <ChevronDown size={15} />
-                        </button>
-                        <button
-                          onClick={() => toggleGroup(gid)}
-                          className="p-1 rounded-lg hover:bg-red-50 text-red-400 transition-colors"
-                        >
-                          <EyeOff size={15} />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => toggleGroup(gid)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition-colors shrink-0"
+                      >
+                        <EyeOff size={15} />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -432,10 +657,14 @@ export default function TVConfig() {
             {excludedIds.length > 0 && (
               <p className="text-xs opacity-70 mt-1">{excludedIds.length} منتج مستبعد يدويًا</p>
             )}
+            <div className="mt-4 pt-4 border-t border-white/15 flex items-center justify-between">
+              <span className="text-sm font-bold opacity-80">مدة الفيديو المتوقعة</span>
+              <span className="text-xl font-black">{formatDuration(estimatedDurationSec)}</span>
+            </div>
           </div>
         </div>
 
-        {/* ===== العمود الأيسر: قائمة المنتجات + الترتيب + الاستبعاد ===== */}
+        {/* ===== العمود الأيسر: قائمة المنتجات + الترتيب بالأرقام + الاستبعاد 🆕 ===== */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5 h-fit">
           <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
             <h3 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider flex items-center gap-2">
@@ -475,9 +704,29 @@ export default function TVConfig() {
                         : "bg-white border-gray-100 hover:border-brand-blue/20"
                     }`}
                   >
-                    <span className="w-6 text-xs font-black text-gray-300 shrink-0 text-center">
-                      {globalIdx + 1}
-                    </span>
+                    {/* 🆕 رقم الترتيب - كتابة مباشرة فقط */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Hash size={13} className="text-gray-300" />
+                      <input
+                        type="number"
+                        min="1"
+                        max={productOrder.length}
+                        value={globalIdx + 1}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val) && val >= 1 && val <= productOrder.length) {
+                            updateProductOrder(id, val);
+                          }
+                        }}
+                        className={`w-11 h-7 text-center text-xs font-bold rounded-lg border ${
+                          excluded 
+                            ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed" 
+                            : "bg-white border-gray-200 text-brand-blue focus:ring-2 focus:ring-brand-blue/20"
+                        } focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                        disabled={excluded}
+                      />
+                    </div>
+
                     <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-100 shrink-0 overflow-hidden flex items-center justify-center">
                       {thumb ? (
                         <img src={thumb} alt="" className="w-full h-full object-contain p-1" />
@@ -497,22 +746,6 @@ export default function TVConfig() {
                     </div>
                     <div className="flex items-center gap-0.5 shrink-0">
                       <button
-                        onClick={() => moveProduct(id, -1)}
-                        disabled={globalIdx === 0}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-20 transition-colors"
-                        title="لأعلى"
-                      >
-                        <ChevronUp size={16} />
-                      </button>
-                      <button
-                        onClick={() => moveProduct(id, 1)}
-                        disabled={globalIdx === productOrder.length - 1}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-20 transition-colors"
-                        title="لأسفل"
-                      >
-                        <ChevronDown size={16} />
-                      </button>
-                      <button
                         onClick={() => toggleExclude(id)}
                         className={`p-1.5 rounded-lg transition-colors ${
                           excluded
@@ -529,6 +762,14 @@ export default function TVConfig() {
               })}
             </div>
           )}
+          
+          {/* 🆕 إرشادات استخدام نظام الترقيم */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-400 flex items-center gap-2">
+              <Hash size={12} />
+              اكتب الرقم المطلوب مباشرة لتحديد ترتيب الظهور — الرقم 1 يظهر أولاً
+            </p>
+          </div>
         </div>
       </div>
 

@@ -177,6 +177,11 @@ exports.update = (id, d) => db.query(
    d.temp, d.group_id||null, d.size||null, d.notes||null, id]
 );
 
+// تحديث "المجموعة" بس — مستخدمة فى التعديل الجماعي (Bulk Edit)، عشان محدش يبعث
+// من غير باقي بيانات المنتج (الاسم، الحرارة...) فيمسحها بالغلط. آمن تمامًا.
+exports.updateGroup = (id, groupId) =>
+  db.query("UPDATE products SET group_id=? WHERE id=?", [groupId || null, id]);
+
 exports.remove = (id) => db.query("DELETE FROM products WHERE id = ?", [id]);
 
 // ── Images ─────────────────────────────────────────────────

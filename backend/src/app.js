@@ -6,7 +6,7 @@ require("dotenv").config();
 require("./config/db");
 
 const productRoutes = require("./routes/productRoutes");
-
+const videoRoutes = require("./routes/videoRoutes");
 const app = express();
 
 // FRONTEND_URL ممكن يكون رابط واحد أو أكتر مفصولين بفاصلة
@@ -32,6 +32,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/products", productRoutes);
+app.use("/api/video", videoRoutes);
 
 // Health check
 app.get("/health", (_, res) => res.json({ status: "ok" }));

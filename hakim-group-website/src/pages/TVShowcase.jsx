@@ -413,7 +413,13 @@ function FinishedScreen({ willLoop }) {
 // ────────────────────────────────────────────────────────────────
 // المكوّن الرئيسي
 // ────────────────────────────────────────────────────────────────
-export default function TVShowcase() {
+export default function TVShowcase({ 
+  products: propProducts, 
+  isRemotion = false,
+  imgDur: propImgDur,
+  detailDur: propDetailDur,
+  ...props 
+}) {
   const [searchParams] = useSearchParams();
 
   const cfg = useMemo(() => {
@@ -428,9 +434,6 @@ export default function TVShowcase() {
     };
   }, [searchParams]);
 
-  // لوب العرض: افتراضيًا شغال (بيبدأ من الأول تلقائيًا بعد ما يخلص).
-  // لو عايز العرض يقف عند شاشة "انتهى العرض" ويفضل ثابت (مثالي وقت التسجيل
-  // عشان تعرف بالظبط هتقطع الفيديو فين) حط فى الرابط: /tv?loop=false
   const loop = searchParams.get("loop") !== "false";
 
   const groupIds = useMemo(() => {
@@ -443,32 +446,40 @@ export default function TVShowcase() {
     return raw ? raw.split(",").map((s) => Number(s.trim())).filter(Boolean) : [];
   }, [searchParams]);
 
-  // ترتيب مخصص كامل (صادر من صفحة الإعدادات /tv-config) — بيحدد
-  // بالظبط أي المنتجات تظهر وبأي ترتيب، وبيتجاهل استبعاد أي منتج مش موجود فيه
   const explicitOrder = useMemo(() => {
     const raw = searchParams.get("order");
     return raw ? raw.split(",").map((s) => Number(s.trim())).filter(Boolean) : [];
   }, [searchParams]);
 
-  const [playlist, setPlaylist] = useState(null); // null = لسه بيحمّل
+  // ← هنا التصحيح المهم
+  const [playlist, setPlaylist] = useState(propProducts || null);
   const [detailsCache, setDetailsCache] = useState({});
   const [productIndex, setProductIndex] = useState(0);
   const [imageIndex, setImageIndex] = useState(0);
-  const [phase, setPhase] = useState("images"); // 'images' | 'detail' | 'finished'
+  const [phase, setPhase] = useState("images");
   const [offline, setOffline] = useState(false);
 
   const detailsCacheRef = useRef(detailsCache);
   detailsCacheRef.current = detailsCache;
 
-  // ── تحميل قائمة المنتجات (وتصفيتها حسب الإعدادات في الرابط) ──
+  // ── تحميل قائمة المنتجات ──
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       try {
+        if (propProducts?.length > 0) {
+          setPlaylist(propProducts);
+          setOffline(false);
+          return;
+        }
+
         const res = await fetch(`${API}/products`);
         if (!res.ok) throw new Error("failed");
+        
         const all = await res.json();
         if (cancelled) return;
+
         let filtered;
         if (explicitOrder.length) {
           const byId = new Map(all.map((p) => [p.id, p]));
@@ -480,20 +491,25 @@ export default function TVShowcase() {
         } else {
           filtered = all;
         }
+
         setPlaylist(filtered);
         setOffline(false);
       } catch (e) {
         if (!cancelled) setOffline(true);
       }
     }
+
     load();
-    // إعادة التحميل كل 10 دقايق عشان أي تحديث في الداتابيز يتظبط لوحده على الشاشة
-    const refresh = setInterval(load, 10 * 60 * 1000);
+
+    const refresh = !propProducts ? setInterval(load, 10 * 60 * 1000) : null;
+
     return () => {
       cancelled = true;
-      clearInterval(refresh);
+      if (refresh) clearInterval(refresh);
     };
-  }, [groupIds, productIds, explicitOrder]);
+  }, [groupIds, productIds, explicitOrder, propProducts]);
+
+  // باقي الكود (ensureDetail, useEffects, return ...) كما هو بدون تغيير
 
   // ── جلب التفاصيل الكاملة (الأغطية إلخ) لمنتج معيّن مرة واحدة فقط ──
   const ensureDetail = useCallback(async (id) => {

@@ -32,6 +32,7 @@ router.put("/reorder",             adminAuth, ctrl.reorder);
 router.get("/",                    ctrl.getAll);
 router.get("/:id",                 ctrl.getOne);
 router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
+router.put("/:id/group",           adminAuth, ctrl.updateGroup);
 router.put("/:id",                 adminAuth, upload.array("images", 10), ctrl.update);
 router.delete("/:id",              adminAuth, ctrl.remove);
 

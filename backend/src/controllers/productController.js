@@ -72,6 +72,17 @@ exports.create = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+// تحديث المجموعة بس — للاستخدام فى التعديل الجماعي (اختيار منتجات متعددة وتغيير مجموعتهم دفعة واحدة)
+exports.updateGroup = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { group_id } = req.body;
+    if (!group_id) return res.status(400).json({ error: "group_id required" });
+    await model.updateGroup(id, group_id);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
