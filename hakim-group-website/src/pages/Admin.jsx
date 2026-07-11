@@ -7,7 +7,8 @@ import {
   Loader2, CheckCircle2, AlertCircle, Package,
   Settings, ChevronDown, ChevronRight, Tag,
   ListOrdered, ChevronUp, GripVertical, Lock,
-  Tv, MonitorPlay, Layers, EyeOff,
+  Tv, MonitorPlay, Layers, EyeOff, Hash,
+  CheckSquare, Square, Copy, 
 } from "lucide-react";
 
 const API    = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -39,22 +40,61 @@ const TEMPS = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-// ترتيب المنتجات فى الموقع — بنفس بالضبط تصميم كروت الترتيب
-// المستخدم فى /tv-config (كارت مدور، صورة مصغّرة، سطر بيانات، وأزرار
-// فوق/تحت) بدل شكل الجدول، عشان الصفحتين يبقوا متطابقين شكليًا ومنطقيًا.
+// 🆕 صف ترتيب المنتج — بنظام الترقيم المباشر + Checkbox للتحديد
 // ─────────────────────────────────────────────────────────────
-function OrderProductRow({ p, index, total, onMove, groupLabel }) {
+function OrderProductRow({ p, index, total, onUpdateOrder, groupLabel, isSelected, onToggleSelect }) {
   const thumb = p.images?.[0]?.url || p.images?.[0];
   const tempLabel = p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد";
   const tempColor =
     p.temp === "hot" ? "text-orange-500" : p.temp === "cold" ? "text-sky-500" : "text-emerald-600";
 
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 border border-gray-100 bg-white hover:border-brand-blue/20 transition-colors">
-      <span className="w-6 text-xs font-black text-gray-300 shrink-0 text-center">{index + 1}</span>
+    <div className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border transition-colors ${
+      isSelected 
+        ? "bg-brand-blueLight/30 border-brand-blue/30 ring-2 ring-brand-blue/20" 
+        : "bg-white border-gray-100 hover:border-brand-blue/20"
+    }`}>
+      {/* 🆕 Checkbox للتحديد */}
+      <button
+        onClick={() => onToggleSelect(p.id)}
+        className="shrink-0 text-gray-400 hover:text-brand-blue transition-colors"
+      >
+        {isSelected ? (
+          <CheckSquare size={18} className="text-brand-blue" />
+        ) : (
+          <Square size={18} />
+        )}
+      </button>
+
+      {/* حقل رقم الترتيب */}
+      <div className="flex items-center gap-1 shrink-0">
+        <Hash size={13} className="text-gray-300" />
+        <input
+          type="number"
+          min="1"
+          max={total}
+          value={index + 1}
+          onChange={(e) => {
+            const val = parseInt(e.target.value);
+            if (!isNaN(val) && val >= 1 && val <= total) {
+              onUpdateOrder(p.id, val);
+            }
+          }}
+          className="w-11 h-7 text-center text-xs font-bold rounded-lg border border-gray-200 bg-white text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+      </div>
+
       <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-100 shrink-0 overflow-hidden flex items-center justify-center">
         {thumb ? (
-          <img src={thumb} alt="" className="w-full h-full object-contain p-1" />
+          <img 
+            src={thumb} 
+            alt="" 
+            className="w-full h-full object-contain p-1"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>');
+            }}
+          />
         ) : (
           <span className="text-[9px] text-gray-300">لا صورة</span>
         )}
@@ -66,29 +106,19 @@ function OrderProductRow({ p, index, total, onMove, groupLabel }) {
           <span className={`font-bold ${tempColor}`}>· {tempLabel}</span>
         </p>
       </div>
-      <div className="flex items-center gap-0.5 shrink-0">
-        <button
-          onClick={() => onMove(p.id, -1)}
-          disabled={index === 0}
-          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-20 transition-colors"
-          title={`لأعلى داخل ${groupLabel}`}
-        >
-          <ChevronUp size={16} />
-        </button>
-        <button
-          onClick={() => onMove(p.id, 1)}
-          disabled={index === total - 1}
-          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-20 transition-colors"
-          title={`لأسفل داخل ${groupLabel}`}
-        >
-          <ChevronDown size={16} />
-        </button>
-      </div>
     </div>
   );
 }
 
-function GroupedOrderCards({ groupBlocksView, moveGroup, moveProductInGroup, search }) {
+function GroupedOrderCards({ 
+  groupBlocksView, 
+  moveGroup, 
+  updateProductOrder, 
+  search, 
+  selectedIds, 
+  onToggleSelect,
+  onToggleSelectAllInGroup // 🆕 دالة تحديد كل منتجات المجموعة
+}) {
   const q = search.trim().toLowerCase();
   const matches = (p) =>
     !q || p.name?.toLowerCase().includes(q) || p.code?.toLowerCase().includes(q);
@@ -98,35 +128,50 @@ function GroupedOrderCards({ groupBlocksView, moveGroup, moveProductInGroup, sea
       {groupBlocksView.map((block, gIdx) => {
         const visibleProducts = block.products.filter(matches);
         if (q && visibleProducts.length === 0) return null;
+        
+        // 🆕 هل كل منتجات المجموعة محددة؟
+        const allSelected = visibleProducts.length > 0 && 
+          visibleProducts.every(p => selectedIds.includes(p.id));
+        
         return (
           <div key={block.gid} className="bg-white rounded-2xl border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-3 bg-brand-blueLight/50 border border-brand-blue/10 rounded-xl px-3 py-2">
-              <span className="w-6 h-6 rounded-full bg-brand-blue text-white text-xs font-black flex items-center justify-center shrink-0">
-                {gIdx + 1}
-              </span>
+              {/* 🆕 زر تحديد المجموعة بالكامل */}
+              <button
+                onClick={() => onToggleSelectAllInGroup(block.gid)}
+                className="shrink-0 text-gray-400 hover:text-brand-blue transition-colors"
+                title={allSelected ? "إلغاء تحديد كل منتجات المجموعة" : "تحديد كل منتجات المجموعة"}
+              >
+                {allSelected ? (
+                  <CheckSquare size={18} className="text-brand-blue" />
+                ) : (
+                  <Square size={18} />
+                )}
+              </button>
+
+              {/* رقم المجموعة */}
+              <div className="flex items-center gap-1 shrink-0">
+                <Hash size={13} className="text-brand-blue/50" />
+                <input
+                  type="number"
+                  min="1"
+                  max={groupBlocksView.length}
+                  value={gIdx + 1}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 1 && val <= groupBlocksView.length) {
+                      moveGroup(block.gid, val);
+                    }
+                  }}
+                  className="w-10 h-7 text-center text-xs font-bold rounded-lg border border-brand-blue/20 bg-white text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </div>
+
               <Layers size={14} className="text-brand-blue shrink-0" />
               <span className="flex-1 text-sm font-extrabold text-brand-blue truncate">{block.label}</span>
               <span className="text-xs text-brand-blue/50 font-semibold shrink-0">
-                {block.products.length} منتج
+                {visibleProducts.length}/{block.products.length} منتج
               </span>
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button
-                  onClick={() => moveGroup(block.gid, -1)}
-                  disabled={gIdx === 0}
-                  className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors text-brand-blue"
-                  title="نقل المجموعة لأعلى"
-                >
-                  <ChevronUp size={15} />
-                </button>
-                <button
-                  onClick={() => moveGroup(block.gid, 1)}
-                  disabled={gIdx === groupBlocksView.length - 1}
-                  className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors text-brand-blue"
-                  title="نقل المجموعة لأسفل"
-                >
-                  <ChevronDown size={15} />
-                </button>
-              </div>
             </div>
 
             <div className="space-y-1.5">
@@ -138,8 +183,10 @@ function GroupedOrderCards({ groupBlocksView, moveGroup, moveProductInGroup, sea
                     p={p}
                     index={realIdx}
                     total={block.products.length}
-                    onMove={moveProductInGroup}
+                    onUpdateOrder={updateProductOrder}
                     groupLabel={block.label}
+                    isSelected={selectedIds.includes(p.id)}
+                    onToggleSelect={onToggleSelect}
                   />
                 );
               })}
@@ -420,10 +467,15 @@ function LidSelector({ selectedLids, onChange }) {
   const doSearch = useCallback(async (q) => {
     if (!q.trim()) { setResults([]); return; }
     setSearching(true);
-    const res  = await apiFetch(`/search/lids?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
-    setResults(data);
-    setSearching(false);
+    try {
+      const res  = await apiFetch(`/search/lids?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setResults(data);
+    } catch (err) {
+      console.error("Search error:", err);
+    } finally {
+      setSearching(false);
+    }
   }, []);
 
   const handleQuery = (e) => {
@@ -441,7 +493,6 @@ function LidSelector({ selectedLids, onChange }) {
     setResults([]);
   };
 
-  // إضافة غطاء يدوي
   const addManualLid = () => {
     if (!query.trim()) return;
     if (selectedLids.some((l) => l.name === query.trim())) {
@@ -474,7 +525,6 @@ function LidSelector({ selectedLids, onChange }) {
 
   return (
     <div className="space-y-3">
-      {/* No lids toggle */}
       <label className="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 rounded-xl border border-gray-200 hover:border-brand-blue/30 transition-colors">
         <div
           onClick={toggleNoLids}
@@ -490,7 +540,6 @@ function LidSelector({ selectedLids, onChange }) {
         </div>
       </label>
 
-      {/* Lid picker — hidden when noLids */}
       <AnimatePresence>
         {!noLids && (
           <motion.div
@@ -499,7 +548,6 @@ function LidSelector({ selectedLids, onChange }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            {/* Selected lids */}
             {selectedLids.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
                 {selectedLids.map((lid) => (
@@ -527,7 +575,6 @@ function LidSelector({ selectedLids, onChange }) {
               </div>
             )}
 
-            {/* Search input */}
             <div className="relative">
               <Tag size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
@@ -552,7 +599,6 @@ function LidSelector({ selectedLids, onChange }) {
               )}
             </div>
 
-            {/* Results dropdown */}
             <AnimatePresence>
               {results.length > 0 && (
                 <motion.ul
@@ -603,7 +649,6 @@ function LidSelector({ selectedLids, onChange }) {
               )}
             </AnimatePresence>
 
-            {/* رسالة عند عدم وجود نتائج */}
             {query.trim() && !searching && results.length === 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
@@ -650,7 +695,14 @@ function ImageUploader({ newFiles, onNewFiles, existingImgs, onRemoveExisting })
         <div className="flex flex-wrap gap-2">
           {existingImgs.map((img) => (
             <div key={img.id} className="relative group w-20 h-20">
-              <img src={img.url} className="w-full h-full object-cover rounded-xl border-2 border-gray-200" />
+              <img 
+                src={img.url} 
+                className="w-full h-full object-cover rounded-xl border-2 border-gray-200"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>');
+                }}
+              />
               <button type="button" onClick={() => onRemoveExisting(img.id)}
                 className="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full
                            items-center justify-center hidden group-hover:flex">
@@ -713,10 +765,14 @@ function NameAutocomplete({ value, onChange }) {
     clearTimeout(timer.current);
     if (v.length < 2) { setSuggestions([]); setOpen(false); return; }
     timer.current = setTimeout(async () => {
-      const res  = await apiFetch(`/search?q=${encodeURIComponent(v)}`);
-      const data = await res.json();
-      setSuggestions(data);
-      setOpen(data.length > 0);
+      try {
+        const res  = await apiFetch(`/search?q=${encodeURIComponent(v)}`);
+        const data = await res.json();
+        setSuggestions(data);
+        setOpen(data.length > 0);
+      } catch (err) {
+        console.error("Search error:", err);
+      }
     }, 280);
   };
 
@@ -816,11 +872,9 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
     e.preventDefault();
     setSaving(true);
     try {
-      // ✅ الخطوة 1: لو في مجموعة جديدة، ننشئها باستخدام apiFetch
       let finalGroupId = form.group_id;
       
       if (showNewGroup && newGroupName.trim()) {
-        // استخدم apiFetch بدل fetch
         const groupResponse = await apiFetch("/groups", {
           method: "POST",
           headers: {
@@ -840,7 +894,6 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
         finalGroupId = newGroup.id;
       }
       
-      // ✅ الخطوة 2: نجهز FormData للمنتج
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => {
         if (k === 'group_id') {
@@ -850,7 +903,6 @@ function ProductFormModal({ editProduct, types, materialGroups, groups, allProdu
         }
       });
       
-      // إرسال الأغطية
       const lidsToSend = selectedLids.map((l) => {
         if (l.isManual || l.manual) {
           return { name: l.name, manual: true };
@@ -1133,7 +1185,7 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
 const ADMIN_AUTH_KEY = "hakim_admin_ok";
 
 // ─────────────────────────────────────────────────────────────
-// شاشة الدخول — بتظهر أول ما تفتح /admin من غير ما تكون مسجل دخول
+// Admin Login
 // ─────────────────────────────────────────────────────────────
 function AdminLogin({ onSuccess }) {
   const [input, setInput] = useState("");
@@ -1183,7 +1235,187 @@ function AdminLogin({ onSuccess }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Main Admin Page
+// 🆕 Bulk Edit Modal - تغيير المجموعة لمنتجات متعددة
+// ─────────────────────────────────────────────────────────────
+function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [showNewGroup, setShowNewGroup] = useState(false);
+
+  const selectedProducts = useMemo(() => {
+    return products.filter(p => selectedIds.includes(p.id));
+  }, [selectedIds, products]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    let finalGroupId = selectedGroupId;
+    
+    if (showNewGroup && newGroupName.trim()) {
+      setSaving(true);
+      try {
+        const groupResponse = await apiFetch("/groups", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newGroupName.trim() })
+        });
+        
+        if (!groupResponse.ok) {
+          throw new Error("فشل إنشاء المجموعة");
+        }
+        
+        const newGroup = await groupResponse.json();
+        finalGroupId = newGroup.id;
+      } catch (err) {
+        onSaved(err.message, "error");
+        setSaving(false);
+        return;
+      }
+    }
+    
+    if (!finalGroupId) {
+      onSaved("اختر مجموعة أولاً", "error");
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      // تحديث كل المنتجات المحددة — عن طريق endpoint مخصص لتحديث المجموعة بس
+      // (آمن ومش هيمسح باقي بيانات المنتج زي الاسم والحرارة)
+      const updates = selectedIds.map(id => 
+        apiFetch(`/${id}/group`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ group_id: finalGroupId })
+        })
+      );
+      
+      const results = await Promise.all(updates);
+      const failed = results.filter(r => !r.ok);
+      
+      if (failed.length > 0) {
+        throw new Error(`فشل تحديث ${failed.length} منتج`);
+      }
+      
+      onSaved(`✅ تم تحديث ${selectedIds.length} منتج بنجاح`);
+      onClose();
+      
+      if (window.refreshAdminData && typeof window.refreshAdminData === 'function') {
+        window.refreshAdminData();
+      }
+    } catch (err) {
+      onSaved(err.message, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm
+                 flex items-center justify-center p-4"
+    >
+      <motion.div dir="rtl"
+        initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95 }}
+        className="bg-white rounded-3xl w-full max-w-md shadow-2xl"
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
+            <Copy size={18} className="text-brand-blue" />
+            تعديل مجموعة {selectedIds.length} منتج
+          </h2>
+          <button onClick={onClose}
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <p className="text-sm text-gray-500 mb-3">
+              المنتجات المحددة: <span className="font-bold text-gray-800">{selectedIds.length}</span>
+            </p>
+            <div className="max-h-32 overflow-y-auto bg-gray-50 rounded-xl p-3 space-y-1 mb-4">
+              {selectedProducts.slice(0, 5).map(p => (
+                <div key={p.id} className="text-sm text-gray-600 truncate">• {p.name}</div>
+              ))}
+              {selectedProducts.length > 5 && (
+                <div className="text-xs text-gray-400">+ {selectedProducts.length - 5} منتجات أخرى</div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-bold text-gray-700 block mb-2">
+              اختر المجموعة الجديدة
+            </label>
+            <select
+              value={showNewGroup ? "__new__" : selectedGroupId}
+              onChange={(e) => {
+                if (e.target.value === "__new__") {
+                  setShowNewGroup(true);
+                  setSelectedGroupId("");
+                } else {
+                  setShowNewGroup(false);
+                  setSelectedGroupId(e.target.value);
+                }
+              }}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm
+                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              required
+            >
+              <option value="">— اختر مجموعة —</option>
+              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              <option value="__new__">➕ إنشاء مجموعة جديدة...</option>
+            </select>
+          </div>
+
+          {showNewGroup && (
+            <div>
+              <label className="text-sm font-bold text-gray-700 block mb-2">
+                اسم المجموعة الجديدة
+              </label>
+              <input
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder='مثال: "Premium Cups"'
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm
+                           focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+                required
+              />
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-3 border-t border-gray-100">
+            <button
+              type="submit"
+              disabled={saving || (!selectedGroupId && !(showNewGroup && newGroupName.trim()))}
+              className="flex-1 py-3 bg-brand-blue text-white font-bold rounded-2xl
+                         hover:opacity-90 transition flex items-center justify-center gap-2
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving && <Loader2 size={16} className="animate-spin" />}
+              {saving ? "جاري التحديث..." : "تحديث المجموعة"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
+            >
+              إلغاء
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Main Admin Page - الكود الكامل المصحح
 // ─────────────────────────────────────────────────────────────
 export default function Admin() {
   const [params] = useSearchParams();
@@ -1197,97 +1429,229 @@ export default function Admin() {
     return localStorage.getItem(ADMIN_AUTH_KEY) === "1";
   });
 
-  const [products,       setProducts]       = useState([]);
-  const [types,          setTypes]          = useState([]);
+  const [products, setProducts] = useState([]);
+  const [types, setTypes] = useState([]);
   const [materialGroups, setMaterialGroups] = useState([]);
-  const [groups,         setGroups]         = useState([]);
-  const [loading,        setLoading]        = useState(true);
-  const [toast,          setToast]          = useState(null);
-  const [showForm,       setShowForm]       = useState(false);
-  const [editTarget,     setEditTarget]     = useState(null);
-  const [deleteId,       setDeleteId]       = useState(null);
-  const [showSettings,   setShowSettings]   = useState(false);
-  const [search,         setSearch]         = useState("");
-  const [filterType,     setFilterType]     = useState("");
-  const [sortMode,       setSortMode]       = useState(false);
-  const [savingOrder,    setSavingOrder]    = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("");
+  const [sortMode, setSortMode] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
+
   const [selectedGroupIds, setSelectedGroupIds] = useState(() => {
     try {
       const raw = localStorage.getItem("hakim_admin_order_groups_v1");
       return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
+  // ── حفظ المجموعات المختارة ──
   useEffect(() => {
-    try { localStorage.setItem("hakim_admin_order_groups_v1", JSON.stringify(selectedGroupIds)); }
-    catch { /* تجاهل */ }
+    try {
+      localStorage.setItem("hakim_admin_order_groups_v1", JSON.stringify(selectedGroupIds));
+    } catch {
+      /* تجاهل */
+    }
   }, [selectedGroupIds]);
 
   const notify = useCallback((msg, type = "success") => setToast({ msg, type }), []);
 
-  const persistOrder = useCallback((nextProducts) => {
-    setProducts(nextProducts);
-    setSavingOrder(true);
-    apiFetch("/reorder", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order: nextProducts.map((p) => p.id) }),
-    })
-      .then((res) => { if (!res.ok) notify("فشل حفظ الترتيب", "error"); })
-      .catch(() => notify("فشل حفظ الترتيب — تحقق من الاتصال", "error"))
-      .finally(() => setSavingOrder(false));
-  }, [notify]);
+  // ── حفظ الترتيب ──
+  const persistOrder = useCallback(
+    (nextProducts) => {
+      setProducts(nextProducts);
+      setSavingOrder(true);
+      apiFetch("/reorder", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: nextProducts.map((p) => p.id) }),
+      })
+        .then((res) => {
+          if (!res.ok) notify("فشل حفظ الترتيب", "error");
+        })
+        .catch(() => notify("فشل حفظ الترتيب — تحقق من الاتصال", "error"))
+        .finally(() => setSavingOrder(false));
+    },
+    [notify]
+  );
 
+  // ── بناء كتل المجموعات ──
   const buildGroupBlocks = useCallback((list) => {
     const order = [];
     const map = new Map();
     list.forEach((p) => {
       const g = p.group_id ?? "none";
-      if (!map.has(g)) { map.set(g, []); order.push(g); }
+      if (!map.has(g)) {
+        map.set(g, []);
+        order.push(g);
+      }
       map.get(g).push(p);
     });
     return { order, map };
   }, []);
 
-  const reorderBySelectedGroups = useCallback((selected) => {
-    const { map } = buildGroupBlocks(products);
-    const front = selected.flatMap((gid) => map.get(gid) || []);
-    const frontIds = new Set(front.map((p) => p.id));
-    const rest = products.filter((p) => !frontIds.has(p.id));
-    persistOrder([...front, ...rest]);
-  }, [products, buildGroupBlocks, persistOrder]);
+  // ── تحريك مجموعة ──
+  const moveSelectedGroup = useCallback(
+    (gid, newPosition) => {
+      const i = selectedGroupIds.indexOf(gid);
+      if (i === -1) return;
+      const newIndex = Math.max(0, Math.min(newPosition - 1, selectedGroupIds.length - 1));
+      if (i === newIndex) return;
 
-  const toggleGroupSelect = useCallback((gid) => {
-    const next = selectedGroupIds.includes(gid)
-      ? selectedGroupIds.filter((x) => x !== gid)
-      : [...selectedGroupIds, gid];
-    setSelectedGroupIds(next);
-    reorderBySelectedGroups(next);
-  }, [selectedGroupIds, reorderBySelectedGroups]);
+      const next = [...selectedGroupIds];
+      const [item] = next.splice(i, 1);
+      next.splice(newIndex, 0, item);
+      setSelectedGroupIds(next);
 
-  const moveSelectedGroup = useCallback((gid, dir) => {
-    const i = selectedGroupIds.indexOf(gid);
-    const j = i + dir;
-    if (i === -1 || j < 0 || j >= selectedGroupIds.length) return;
-    const next = [...selectedGroupIds];
-    [next[i], next[j]] = [next[j], next[i]];
-    setSelectedGroupIds(next);
-    reorderBySelectedGroups(next);
-  }, [selectedGroupIds, reorderBySelectedGroups]);
+      const { map } = buildGroupBlocks(products);
+      const front = next.flatMap((gid) => map.get(gid) || []);
+      const frontIds = new Set(front.map((p) => p.id));
+      const rest = products.filter((p) => !frontIds.has(p.id));
+      persistOrder([...front, ...rest]);
+    },
+    [selectedGroupIds, products, buildGroupBlocks, persistOrder]
+  );
 
-  const moveProductInGroup = useCallback((id, dir) => {
-    const p = products.find((x) => x.id === id);
-    if (!p) return;
-    const gid = p.group_id ?? "none";
-    const { order, map } = buildGroupBlocks(products);
-    const arr = map.get(gid);
-    const i = arr.findIndex((x) => x.id === id);
-    const j = i + dir;
-    if (j < 0 || j >= arr.length) return;
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-    persistOrder(order.flatMap((g) => map.get(g)));
-  }, [products, buildGroupBlocks, persistOrder]);
+  // ── تحديث ترتيب منتج ──
+  const updateProductOrder = useCallback(
+    (id, newPosition) => {
+      const p = products.find((x) => x.id === id);
+      if (!p) return;
+      const gid = p.group_id ?? "none";
+      const { order, map } = buildGroupBlocks(products);
+      const arr = map.get(gid);
+      const i = arr.findIndex((x) => x.id === id);
+      if (i === -1) return;
+      const newIndex = Math.max(0, Math.min(newPosition - 1, arr.length - 1));
+      if (i === newIndex) return;
 
+      const [item] = arr.splice(i, 1);
+      arr.splice(newIndex, 0, item);
+      persistOrder(order.flatMap((g) => map.get(g)));
+    },
+    [products, buildGroupBlocks, persistOrder]
+  );
+
+  // ── اختيار/إلغاء اختيار مجموعة ──
+  const toggleGroupSelect = useCallback(
+    (gid) => {
+      const next = selectedGroupIds.includes(gid)
+        ? selectedGroupIds.filter((x) => x !== gid)
+        : [...selectedGroupIds, gid];
+      setSelectedGroupIds(next);
+      const { map } = buildGroupBlocks(products);
+      const front = next.flatMap((gid) => map.get(gid) || []);
+      const frontIds = new Set(front.map((p) => p.id));
+      const rest = products.filter((p) => !frontIds.has(p.id));
+      persistOrder([...front, ...rest]);
+    },
+    [selectedGroupIds, products, buildGroupBlocks, persistOrder]
+  );
+
+  // ── اختيار/إلغاء اختيار منتج ──
+  const toggleSelect = useCallback((id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }, []);
+
+  // ── اختيار الكل ──
+  const toggleSelectAll = useCallback(() => {
+    const visibleIds = sortMode
+      ? products.map((p) => p.id)
+      : products
+          .filter((p) => {
+            const matchS = !search || p.name.includes(search) || p.code?.includes(search);
+            const matchT = !filterType || p.type_id === Number(filterType);
+            return matchS && matchT;
+          })
+          .map((p) => p.id);
+
+    const allSelected = visibleIds.every((id) => selectedIds.includes(id));
+    if (allSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])]);
+    }
+  }, [products, search, filterType, selectedIds, sortMode]);
+
+  // ── إلغاء التحديد ──
+  const clearSelection = useCallback(() => setSelectedIds([]), []);
+
+  // ============================================================
+  // 🔥 تعريف groupBlocksView قبل استخدامه
+  // ============================================================
+  const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
+  const allGroupBlocks = useMemo(() => buildGroupBlocks(products), [products, buildGroupBlocks]);
+
+  const groupBlocksView = useMemo(() => {
+    return selectedGroupIds.map((gid) => ({
+      gid,
+      label: gid === "none" ? "بدون مجموعة" : groupsById.get(gid)?.name || "مجموعة محذوفة",
+      products: allGroupBlocks.map.get(gid) || [],
+    }));
+  }, [selectedGroupIds, groupsById, allGroupBlocks]);
+
+  // ============================================================
+  // 🔥 تعريف toggleSelectAllInGroup بعد groupBlocksView
+  // ============================================================
+  const toggleSelectAllInGroup = useCallback(
+    (groupId) => {
+      const group = groupBlocksView.find((g) => g.gid === groupId);
+      if (!group) return;
+
+      const productIds = group.products.map((p) => p.id);
+      const allSelected = productIds.every((id) => selectedIds.includes(id));
+
+      if (allSelected) {
+        setSelectedIds((prev) => prev.filter((id) => !productIds.includes(id)));
+      } else {
+        setSelectedIds((prev) => [...new Set([...prev, ...productIds])]);
+      }
+    },
+    [groupBlocksView, selectedIds]
+  );
+
+  // ============================================================
+  // باقي الـ useMemo
+  // ============================================================
+  const availableGroupChips = useMemo(() => {
+    const chips = groups
+      .filter((g) => !selectedGroupIds.includes(g.id))
+      .map((g) => ({
+        gid: g.id,
+        name: g.name,
+        count: allGroupBlocks.map.get(g.id)?.length || 0,
+      }));
+    if (allGroupBlocks.map.has("none") && !selectedGroupIds.includes("none")) {
+      chips.push({
+        gid: "none",
+        name: "بدون مجموعة",
+        count: allGroupBlocks.map.get("none").length,
+      });
+    }
+    return chips;
+  }, [groups, selectedGroupIds, allGroupBlocks]);
+
+  const filtered = sortMode
+    ? products
+    : products.filter((p) => {
+        const matchS = !search || p.name.includes(search) || p.code?.includes(search);
+        const matchT = !filterType || p.type_id === Number(filterType);
+        return matchS && matchT;
+      });
+
+  // ── تحميل البيانات ──
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -1309,7 +1673,7 @@ export default function Admin() {
           return r.json();
         }),
       ]);
-      
+
       setProducts(Array.isArray(p) ? p : []);
       setTypes(Array.isArray(t) ? t : []);
       setMaterialGroups(Array.isArray(m) ? m : []);
@@ -1326,7 +1690,7 @@ export default function Admin() {
     }
   }, [notify]);
 
-  // Expose load function globally
+  // ── expose load ──
   useEffect(() => {
     window.refreshAdminData = load;
     return () => {
@@ -1340,92 +1704,109 @@ export default function Admin() {
     }
   }, [load, authed]);
 
+  // ── مسح التحديد عند الخروج من وضع الترتيب ──
+  useEffect(() => {
+    if (!sortMode) {
+      setSelectedIds([]);
+    }
+  }, [sortMode]);
+
+  // ── فتح التعديل ──
   const openEdit = async (p) => {
-    const res  = await apiFetch(`/${p.id}`);
-    const data = await res.json();
-    setEditTarget(data);
-    setShowForm(true);
+    try {
+      const res = await apiFetch(`/${p.id}`);
+      if (!res.ok) throw new Error(`Failed to fetch product ${p.id}`);
+      const data = await res.json();
+      setEditTarget(data);
+      setShowForm(true);
+    } catch (err) {
+      notify("فشل تحميل بيانات المنتج", "error");
+      console.error("Error fetching product:", err);
+    }
   };
 
+  // ── حذف منتج ──
   const handleDelete = async () => {
-    const res = await apiFetch(`/${deleteId}`, { method: "DELETE" });
-    if (res.ok) { notify("تم الحذف"); load(); }
-    else notify("فشل الحذف", "error");
+    try {
+      const res = await apiFetch(`/${deleteId}`, { method: "DELETE" });
+      if (res.ok) {
+        notify("تم الحذف");
+        load();
+      } else {
+        notify("فشل الحذف", "error");
+      }
+    } catch (err) {
+      notify("فشل الحذف — تحقق من الاتصال", "error");
+    }
     setDeleteId(null);
   };
-
-  const groupsById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
-
-  const allGroupBlocks = useMemo(() => buildGroupBlocks(products), [products, buildGroupBlocks]);
-
-  const groupBlocksView = useMemo(() => {
-    return selectedGroupIds.map((gid) => ({
-      gid,
-      label: gid === "none" ? "بدون مجموعة" : (groupsById.get(gid)?.name || "مجموعة محذوفة"),
-      products: allGroupBlocks.map.get(gid) || [],
-    }));
-  }, [selectedGroupIds, groupsById, allGroupBlocks]);
-
-  const availableGroupChips = useMemo(() => {
-    const chips = groups
-      .filter((g) => !selectedGroupIds.includes(g.id))
-      .map((g) => ({ gid: g.id, name: g.name, count: allGroupBlocks.map.get(g.id)?.length || 0 }));
-    if (allGroupBlocks.map.has("none") && !selectedGroupIds.includes("none")) {
-      chips.push({ gid: "none", name: "بدون مجموعة", count: allGroupBlocks.map.get("none").length });
-    }
-    return chips;
-  }, [groups, selectedGroupIds, allGroupBlocks]);
-
-  const filtered = sortMode
-    ? (Array.isArray(products) ? products : [])
-    : (Array.isArray(products) ? products.filter((p) => {
-        const matchS = !search || p.name.includes(search) || p.code?.includes(search);
-        const matchT = !filterType || p.type_id === Number(filterType);
-        return matchS && matchT;
-      }) : []);
 
   if (!authed) return <AdminLogin onSuccess={() => setAuthed(true)} />;
 
   return (
     <div dir="rtl" className="pt-20 min-h-screen bg-gray-50">
+      {/* الهيدر */}
       <div className="bg-brand-blue text-white py-10 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black">🛠️ لوحة تحكم المنتجات</h1>
-            <p className="text-blue-200 text-sm mt-1">{Array.isArray(products) ? products.length : 0} منتج</p>
+            <p className="text-blue-200 text-sm mt-1">
+              {Array.isArray(products) ? products.length : 0} منتج
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => { grantTVAccess(); window.open("/tv-config", "_blank"); }}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border border-white/30 text-white hover:bg-white/10 transition">
+              onClick={() => {
+                grantTVAccess();
+                window.open("/tv-config", "_blank");
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border border-white/30 text-white hover:bg-white/10 transition"
+            >
               <Settings size={15} />
               إعدادات شاشة العرض
             </button>
             <button
-              onClick={() => { grantTVAccess(); window.open("/tv", "_blank"); }}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-white/15 border border-white/30 text-white hover:bg-white/25 transition">
+              onClick={() => {
+                grantTVAccess();
+                window.open("/tv", "_blank");
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-white/15 border border-white/30 text-white hover:bg-white/25 transition"
+            >
               <Tv size={15} />
               فتح شاشة العرض
             </button>
-            <button onClick={() => { setSortMode((v) => !v); setShowSettings(false); }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border transition
-                ${sortMode
+            <button
+              onClick={() => {
+                setSortMode((v) => !v);
+                setShowSettings(false);
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border transition ${
+                sortMode
                   ? "bg-white text-brand-blue border-white"
-                  : "border-white/30 text-white hover:bg-white/10"}`}>
+                  : "border-white/30 text-white hover:bg-white/10"
+              }`}
+            >
               <ListOrdered size={15} />
-              {sortMode ? "تم — رجوع للعرض العادي" : "ترتيب المنتجات فى الموقع"}
+              {sortMode ? "تم — رجوع للعرض العادي" : "ترتيب المنتجات"}
             </button>
-            <button onClick={() => setShowSettings((v) => !v)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border transition
-                ${showSettings
+            <button
+              onClick={() => setShowSettings((v) => !v)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border transition ${
+                showSettings
                   ? "bg-white text-brand-blue border-white"
-                  : "border-white/30 text-white hover:bg-white/10"}`}>
+                  : "border-white/30 text-white hover:bg-white/10"
+              }`}
+            >
               <Settings size={15} />
               إدارة الأنواع والخامات
             </button>
             <button
-              onClick={() => { setEditTarget(null); setShowForm(true); }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-brand-green text-white text-sm font-bold rounded-full hover:opacity-90 transition">
+              onClick={() => {
+                setEditTarget(null);
+                setShowForm(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-brand-green text-white text-sm font-bold rounded-full hover:opacity-90 transition"
+            >
               <Plus size={16} />
               إضافة منتج
             </button>
@@ -1437,11 +1818,10 @@ export default function Admin() {
         </p>
         {sortMode && (
           <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 text-blue-100 text-xs bg-white/10 rounded-xl px-4 py-2.5">
-            <GripVertical size={14} className="shrink-0" />
+            <Hash size={14} className="shrink-0" />
             <span>
-              اختار المجموعات اللي عايز ترتبها من الصندوق تحت، رتّبها هي والمقاسات اللي جواها
-              — بالظبط زي ترتيب شاشة العرض. كل حركة بتتحفظ فورًا وبتنعكس على صفحة "منتجاتنا"
-              بالموقع مباشرة.
+              اكتب الرقم المطلوب لتحديد ترتيب المجموعة أو المنتج — الرقم 1 يظهر أولاً.
+              استخدم الـ Checkbox لتحديد منتجات متعددة وتغيير مجموعتهم دفعة واحدة.
               {savingOrder && <span className="mr-2 font-bold">جارِ الحفظ...</span>}
             </span>
           </div>
@@ -1449,38 +1829,94 @@ export default function Admin() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+        {/* الإعدادات */}
         <AnimatePresence>
           {showSettings && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }} className="overflow-hidden"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
             >
               <SettingsPanel
-                types={types} materialGroups={materialGroups} groups={groups}
-                onRefresh={load} toast={notify}
+                types={types}
+                materialGroups={materialGroups}
+                groups={groups}
+                onRefresh={load}
+                toast={notify}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* البحث والفلترة */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)}
+            <Search
+              size={14}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="بحث بالاسم أو الكود..."
               className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30" />
+                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+            />
           </div>
           {!sortMode && (
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
               className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30">
+                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+            >
               <option value="">كل الأنواع</option>
-              {types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {types.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
             </select>
+          )}
+
+          {/* أزرار التحديد الجماعي */}
+          {sortMode && (
+            <div className="flex items-center gap-2 mr-auto">
+              {selectedIds.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowBulkEdit(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:opacity-90 transition"
+                  >
+                    <Copy size={14} />
+                    تغيير المجموعة ({selectedIds.length})
+                  </button>
+                  <button
+                    onClick={clearSelection}
+                    className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-500 transition"
+                  >
+                    إلغاء التحديد
+                  </button>
+                </>
+              )}
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold text-gray-500 hover:text-brand-blue transition"
+              >
+                {filtered.length > 0 &&
+                filtered.every((p) => selectedIds.includes(p.id)) ? (
+                  <CheckSquare size={15} />
+                ) : (
+                  <Square size={15} />
+                )}
+                تحديد الكل
+              </button>
+            </div>
           )}
         </div>
 
+        {/* المجموعات المختارة للترتيب */}
         {sortMode && (
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -1490,43 +1926,44 @@ export default function Admin() {
             {selectedGroupIds.length > 0 && (
               <div className="space-y-1.5 mb-4">
                 {selectedGroupIds.map((gid, idx) => {
-                  const label = gid === "none" ? "بدون مجموعة" : (groupsById.get(gid)?.name || "مجموعة محذوفة");
+                  const label =
+                    gid === "none"
+                      ? "بدون مجموعة"
+                      : groupsById.get(gid)?.name || "مجموعة محذوفة";
                   const count = allGroupBlocks.map.get(gid)?.length || 0;
                   return (
                     <div
                       key={gid}
                       className="flex items-center gap-2 bg-brand-blueLight/60 border border-brand-blue/10 rounded-xl px-3 py-2"
                     >
-                      <span className="w-6 h-6 rounded-full bg-brand-blue text-white text-xs font-black flex items-center justify-center shrink-0">
-                        {idx + 1}
-                      </span>
-                      <span className="flex-1 text-sm font-bold text-gray-700 truncate">{label}</span>
-                      <span className="text-xs text-gray-400 shrink-0">{count} منتج</span>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <button
-                          onClick={() => moveSelectedGroup(gid, -1)}
-                          disabled={idx === 0}
-                          className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors"
-                          title="نقل المجموعة لأعلى"
-                        >
-                          <ChevronUp size={15} />
-                        </button>
-                        <button
-                          onClick={() => moveSelectedGroup(gid, 1)}
-                          disabled={idx === selectedGroupIds.length - 1}
-                          className="p-1 rounded-lg hover:bg-white disabled:opacity-25 transition-colors"
-                          title="نقل المجموعة لأسفل"
-                        >
-                          <ChevronDown size={15} />
-                        </button>
-                        <button
-                          onClick={() => toggleGroupSelect(gid)}
-                          className="p-1 rounded-lg hover:bg-red-50 text-red-400 transition-colors"
-                          title="إخفاء من هذه الجلسة (بيفضل مكانه فى الترتيب زي ما هو)"
-                        >
-                          <EyeOff size={15} />
-                        </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Hash size={13} className="text-brand-blue/50" />
+                        <input
+                          type="number"
+                          min="1"
+                          max={selectedGroupIds.length}
+                          value={idx + 1}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val >= 1 && val <= selectedGroupIds.length) {
+                              moveSelectedGroup(gid, val);
+                            }
+                          }}
+                          className="w-10 h-7 text-center text-xs font-bold rounded-lg border border-brand-blue/20 bg-white text-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
                       </div>
+
+                      <span className="flex-1 text-sm font-bold text-gray-700 truncate">
+                        {label}
+                      </span>
+                      <span className="text-xs text-gray-400 shrink-0">{count} منتج</span>
+                      <button
+                        onClick={() => toggleGroupSelect(gid)}
+                        className="p-1 rounded-lg hover:bg-red-50 text-red-400 transition-colors shrink-0"
+                        title="إخفاء من هذه الجلسة"
+                      >
+                        <EyeOff size={15} />
+                      </button>
                     </div>
                   );
                 })}
@@ -1548,12 +1985,13 @@ export default function Admin() {
               )}
             </div>
             <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-              اختار المجموعة اللي عايز ترتبها دلوقتي، رتّبها هي والمقاسات اللي جواها، وكل
-              حركة بتتحفظ فورًا. أي مجموعة مش مختارة بتفضل فى مكانها فى الموقع زي ما هي.
+              اختار المجموعة اللي عايز ترتبها، واكتب رقمها الجديد. كل تغيير بيتحفظ فوراً.
+              استخدم الـ Checkbox لتحديد منتجات متعددة وتغيير مجموعتهم دفعة واحدة.
             </p>
           </div>
         )}
 
+        {/* المحتوى الرئيسي */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 size={32} className="animate-spin text-brand-blue" />
@@ -1568,8 +2006,11 @@ export default function Admin() {
             <GroupedOrderCards
               groupBlocksView={groupBlocksView}
               moveGroup={moveSelectedGroup}
-              moveProductInGroup={moveProductInGroup}
+              updateProductOrder={updateProductOrder}
               search={search}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleSelectAllInGroup={toggleSelectAllInGroup}
             />
           )
         ) : (
@@ -1578,61 +2019,97 @@ export default function Admin() {
               <table className="w-full text-sm min-w-[750px]">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    {["","الاسم","الكود","النوع","الخامة","المقاس","الحرارة",""].map((h, i) => (
-                      <th key={i} className="px-4 py-3 text-right text-xs font-bold text-gray-500 whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                    {["", "الاسم", "الكود", "النوع", "الخامة", "المقاس", "الحرارة", ""].map(
+                      (h, i) => (
+                        <th
+                          key={i}
+                          className="px-4 py-3 text-right text-xs font-bold text-gray-500 whitespace-nowrap"
+                        >
+                          {h}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50 transition-colors group">
-                        <td className="px-4 py-3">
-                          {p.images?.[0]?.url
-                            ? <img src={p.images[0].url} className="w-11 h-11 object-cover rounded-xl" />
-                            : <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center">
-                                <Package size={18} className="text-gray-300" />
-                              </div>}
-                        </td>
-                        <td className="px-4 py-3 font-semibold text-gray-800 max-w-[180px] truncate">
-                          {p.name}
-                        </td>
-                        <td className="px-4 py-3 font-mono text-gray-500 text-xs">{p.code || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
-                            {p.type_name}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
-                          {p.material_name
-                            ? <><span className="font-mono font-bold">{p.material_name}</span>
-                              <span className="text-gray-400"> / {p.material_category}</span></>
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">{p.size || "—"}</td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-bold
-                            ${p.temp === "hot" ? "text-orange-500"
-                            : p.temp === "cold" ? "text-sky-500"
-                            : "text-emerald-600"}`}>
-                            {p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openEdit(p)}
-                              className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-brand-blue transition-colors">
-                              <Pencil size={15} />
-                            </button>
-                            <button onClick={() => setDeleteId(p.id)}
-                              className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors">
-                              <Trash2 size={15} />
-                            </button>
+                    <tr
+                      key={p.id}
+                      className="hover:bg-gray-50 transition-colors group"
+                    >
+                      <td className="px-4 py-3">
+                        {p.images?.[0]?.url ? (
+                          <img
+                            src={p.images[0].url}
+                            className="w-11 h-11 object-cover rounded-xl"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src =
+                                "data:image/svg+xml;utf8," +
+                                encodeURIComponent(
+                                  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>'
+                                );
+                            }}
+                          />
+                        ) : (
+                          <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <Package size={18} className="text-gray-300" />
                           </div>
-                        </td>
-                      </tr>
-                    ))}
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-800 max-w-[180px] truncate">
+                        {p.name}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-gray-500 text-xs">
+                        {p.code || "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
+                          {p.type_name}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">
+                        {p.material_name ? (
+                          <>
+                            <span className="font-mono font-bold">{p.material_name}</span>
+                            <span className="text-gray-400"> / {p.material_category}</span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{p.size || "—"}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs font-bold ${
+                            p.temp === "hot"
+                              ? "text-orange-500"
+                              : p.temp === "cold"
+                              ? "text-sky-500"
+                              : "text-emerald-600"
+                          }`}
+                        >
+                          {p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openEdit(p)}
+                            className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-brand-blue transition-colors"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(p.id)}
+                            className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
               {filtered.length === 0 && (
@@ -1646,6 +2123,7 @@ export default function Admin() {
         )}
       </div>
 
+      {/* الـ Modals */}
       <AnimatePresence>
         {showForm && (
           <ProductFormModal
@@ -1665,23 +2143,49 @@ export default function Admin() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {showBulkEdit && (
+          <BulkEditModal
+            selectedIds={selectedIds}
+            products={products}
+            groups={groups}
+            onClose={() => setShowBulkEdit(false)}
+            onSaved={notify}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {deleteId && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4">
-            <motion.div dir="rtl" initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4"
+          >
+            <motion.div
+              dir="rtl"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+            >
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={28} className="text-red-500" />
               </div>
               <h3 className="font-extrabold text-xl text-gray-800 mb-2">حذف المنتج؟</h3>
-              <p className="text-sm text-gray-500 mb-7">هيتحذف نهائياً مع كل صوره من Cloudinary.</p>
+              <p className="text-sm text-gray-500 mb-7">
+                هيتحذف نهائياً مع كل صوره من Cloudinary.
+              </p>
               <div className="flex gap-3">
-                <button onClick={handleDelete}
-                  className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90">
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90"
+                >
                   نعم، احذف
                 </button>
-                <button onClick={() => setDeleteId(null)}
-                  className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50">
+                <button
+                  onClick={() => setDeleteId(null)}
+                  className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
+                >
                   إلغاء
                 </button>
               </div>

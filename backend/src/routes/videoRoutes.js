@@ -7,6 +7,10 @@ const fsp = fs.promises;
 const crypto = require("crypto");
 const productModel = require("../models/productModel");
 const { generateShowcaseVideo } = require("../services/ffmpegVideoBuilder");
+const localOnly = require("../middlewares/localOnly");
+
+// كل راوت هنا محصور على جهازك (localhost) بس — راجع localOnly.js للتفاصيل
+router.use(localOnly);
 
 const VIDEOS_DIR = path.join(__dirname, "../public/videos");
 if (!fs.existsSync(VIDEOS_DIR)) {

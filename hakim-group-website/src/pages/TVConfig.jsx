@@ -29,6 +29,9 @@ const TRANSITION_DUR = 1.2;
 // الباك إند شغال على /api عادةً، والفيديوهات بترجع كرابط نسبي زي /videos/xxx.mp4
 // لازم نبنيه فوق دومين الباك إند نفسه (مش دومين الفرونت إند) عشان يفتح صح
 const BACKEND_ORIGIN = API.replace(/\/api\/?$/, "");
+// توليد الفيديو متاح بس وانت شغّال الموقع من جهازك (localhost) — مش على
+// السيرفر الحقيقي، عشان توليد الفيديو تقيل على المعالج ومخصص للتطوير المحلي
+const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
 function formatDuration(totalSeconds) {
   const s = Math.max(0, Math.round(totalSeconds));
@@ -162,6 +165,10 @@ export default function TVConfig() {
 
   // ── دالة توليد الفيديو مع مؤشر التقدم الحقيقي (مش مزيف) ──
   const handleGenerateVideo = async () => {
+    if (!isLocalHost) {
+      alert("توليد الفيديو متاح بس وانت شغّال الموقع من جهازك (localhost).");
+      return;
+    }
     if (finalOrder.length === 0) {
       alert("لا يوجد منتجات لتوليد الفيديو");
       return;
@@ -470,26 +477,28 @@ export default function TVConfig() {
               {copied ? <Check size={16} className="text-brand-green" /> : <Copy size={16} />}
               {copied ? "تم النسخ" : "نسخ الرابط"}
             </button>
-            <button
-              onClick={handleGenerateVideo}
-              disabled={isGenerating}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg ${
-                isGenerating
-                  ? "bg-gray-400 cursor-not-allowed opacity-60"
-                  : "bg-gradient-to-r from-violet-600 to-purple-600 hover:brightness-110 hover:shadow-violet-500/30"
-              }`}
-            >
-              {isGenerating ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" />
-                  جاري التوليد...
-                </>
-              ) : (
-                <>
-                  🎬 توليد فيديو MP4
-                </>
-              )}
-            </button>
+            {isLocalHost && (
+              <button
+                onClick={handleGenerateVideo}
+                disabled={isGenerating}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all shadow-lg ${
+                  isGenerating
+                    ? "bg-gray-400 cursor-not-allowed opacity-60"
+                    : "bg-gradient-to-r from-violet-600 to-purple-600 hover:brightness-110 hover:shadow-violet-500/30"
+                }`}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/60 border-t-white rounded-full animate-spin" />
+                    جاري التوليد...
+                  </>
+                ) : (
+                  <>
+                    🎬 توليد فيديو MP4
+                  </>
+                )}
+              </button>
+            )}
             <a
               href={tvUrl}
               target="_blank"
