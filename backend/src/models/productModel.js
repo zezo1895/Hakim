@@ -270,7 +270,7 @@ exports.setLids = async (productId, lidData = []) => {
     for (const manual of manualLids) {
       const manualId = await exports.addManualLid(manual.name);
       await db.query(
-        "INSERT INTO product_manual_lids (product_id, manual_lid_id) VALUES (?, ?)",
+        "INSERT INTO product_manual_lids (product_id, manual_lid_id) VALUES (?, ?) ",
         [productId, manualId]
       );
     }

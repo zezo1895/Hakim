@@ -13,7 +13,7 @@ import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import TVShowcase from "./pages/TVShowcase";
 import TVConfig from "./pages/TVConfig";
-import TVGate from "./components/TVGate";
+import TVGate from "./components/TVGate";    
 
 // ─────────────────────────────────────────────────────────────
 // /tv و /tv-config صفحات مستقلة تمامًا عن الموقع الأساسي:
