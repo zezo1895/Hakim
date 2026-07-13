@@ -148,15 +148,39 @@ exports.searchLids = async (q) => {
 
 // ── Write ──────────────────────────────────────────────────
 exports.create = async (d) => {
-  // منتج جديد يتحط آخر الترتيب افتراضيًا (مش هيقلب ترتيب حد)
-  const [[{ maxOrder } = { maxOrder: 0 }]] = await db.query(
-    "SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM products"
-  );
+  let insertOrder = null;
+
+  // لو المنتج تابع لمجموعة، حطه فورًا بعد آخر منتج في نفس المجموعة
+  // (مش آخر رقم فى الجدول كله) — عشان يفضل جنب مجموعته من غير الحاجة
+  // لعمل "إعادة ترتيب" يدوي بعد كل إضافة
+  if (d.group_id) {
+    const [[row] = []] = await db.query(
+      "SELECT MAX(sort_order) AS maxInGroup FROM products WHERE group_id = ?",
+      [d.group_id]
+    );
+    if (row && row.maxInGroup != null) {
+      insertOrder = row.maxInGroup + 1;
+      // فسح مكان للمنتج الجديد: زحزحة كل اللي بعده رقم واحد لقدام
+      await db.query(
+        "UPDATE products SET sort_order = sort_order + 1 WHERE sort_order >= ?",
+        [insertOrder]
+      );
+    }
+  }
+
+  // مفيش مجموعة، أو المجموعة دي لسه مفيهاش منتجات — يتحط آخر الترتيب العام
+  if (insertOrder == null) {
+    const [[{ maxOrder } = { maxOrder: 0 }]] = await db.query(
+      "SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM products"
+    );
+    insertOrder = maxOrder + 1;
+  }
+
   return db.query(
     `INSERT INTO products (name, code, type_id, material_id, temp, group_id, size, notes, sort_order)
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [d.name, d.code||null, d.type_id||null, d.material_id||null,
-     d.temp, d.group_id||null, d.size||null, d.notes||null, maxOrder + 1]
+     d.temp, d.group_id||null, d.size||null, d.notes||null, insertOrder]
   );
 };
 
