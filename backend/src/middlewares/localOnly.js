@@ -1,26 +1,16 @@
-// backend/src/middlewares/localOnly.js
-// ============================================================================
-// بيمنع أي طلب لتوليد الفيديو إلا لو جاي من جهازك (localhost) بالظبط.
-// توليد الفيديو بـ FFmpeg تقيل جدًا على المعالج والذاكرة، ومش مناسب إطلاقًا
-// يتشغل على سيرفر الإنتاج (ممكن يبطّئ الموقع أو يوقّع السيرفر لو الخطة صغيرة).
-//
-// طبقتين حماية مع بعض:
-//   1) لازم الطلب يكون جاي فعليًا من 127.0.0.1 / ::1 (يعني من نفس الجهاز).
-//   2) لو NODE_ENV=production (زي ما بيحصل تلقائيًا على معظم منصات الاستضافة
-//      وقت الديبلوي)، بيتقفل السيرفس خالص حتى لو حد حاول يناديها من على
-//      نفس السيرفر — عشان الميزة دي مخصصة للتطوير المحلي فقط.
-// ============================================================================
+// يسمح بتوليد الفيديو محليًا أثناء التطوير، وعلى Railway في production.
 module.exports = (req, res, next) => {
   const rawIp = req.ip || req.socket?.remoteAddress || "";
   const ip = rawIp.replace("::ffff:", "");
-  const isLoopback = ip === "127.0.0.1" || ip === "::1";
-  const isProdEnv = process.env.NODE_ENV === "production";
 
-  if (!isLoopback || isProdEnv) {
+  const isLoopback = ip === "127.0.0.1" || ip === "::1";
+  const isProduction = process.env.NODE_ENV === "production";
+
+  if (!isProduction && !isLoopback) {
     return res.status(403).json({
-      error:
-        "توليد الفيديو متاح بس وأنت مشغّل السيرفر على جهازك (localhost) — مش على سيرفر الإنتاج.",
+      error: "Video generation is available only from localhost in development.",
     });
   }
+
   next();
 };

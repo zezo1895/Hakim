@@ -1,47 +1,95 @@
 const express = require("express");
-const cors    = require("cors");
+const cors = require("cors");
+const path = require("path");
+
 require("dotenv").config();
 
-// Boot DB connection check
+// اختبار اتصال قاعدة البيانات عند تشغيل السيرفر
 require("./config/db");
 
 const productRoutes = require("./routes/productRoutes");
 const videoRoutes = require("./routes/videoRoutes");
+
 const app = express();
 
-// FRONTEND_URL ممكن يكون رابط واحد أو أكتر مفصولين بفاصلة
-// (مثلاً دومين Vercel الأساسي + دومينات الـ preview)
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
-  .map((o) => o.trim())
+  .map((origin) => origin.trim())
   .filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // اسمح بطلبات بدون origin (Postman, curl, health checks)
-    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    callback(new Error("Not allowed by CORS"));
-  },
-  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
-  allowedHeaders: ["Content-Type", "x-admin-secret"],
-}));
+// السماح بتطبيق React/Electron أثناء التطوير المحلي
+for (const localOrigin of [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]) {
+  if (!allowedOrigins.includes(localOrigin)) {
+    allowedOrigins.push(localOrigin);
+  }
+}
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // السماح بطلبات Postman وHealth Checks بدون Origin
+      if (
+        !origin ||
+        allowedOrigins.length === 0 ||
+        allowedOrigins.includes(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "x-admin-secret",
+    ],
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// إتاحة ملفات الفيديو الناتجة
+app.use(
+  "/videos",
+  express.static(
+    path.join(__dirname, "public/videos")
+  )
+);
 
 // Routes
 app.use("/api/products", productRoutes);
 app.use("/api/video", videoRoutes);
 
 // Health check
-app.get("/health", (_, res) => res.json({ status: "ok" }));
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+  });
+});
 
-// Global error handler
+// Error handler
 app.use((err, req, res, next) => {
-  console.error("❌ Error:", err.message);
-  res.status(err.status || 500).json({ error: err.message || "Internal server error" });
+  console.error("Server error:", err.message);
+
+  res.status(err.status || 500).json({
+    error: err.message || "Internal server error",
+  });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
