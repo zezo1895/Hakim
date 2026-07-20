@@ -249,12 +249,14 @@ async function buildImageClip(
   // بنخلي الصورة تاخد 74% بس من مساحة الفريم (مش full-bleed) عشان تبان أبعد
   // شوية وفيه مساحة فاضية حواليها، بدل ما تكون قريبة جدًا وملزّقة في الحواف
   const IMAGE_FILL_RATIO = 0.74;
-  const scaledW = Math.round(WIDTH * 2 * IMAGE_FILL_RATIO);
-  const scaledH = Math.round(HEIGHT * 2 * IMAGE_FILL_RATIO);
+  // Keep the filter graph at the final 1080p size. The previous 3840x2160
+  // intermediate frame caused Railway to terminate FFmpeg for high memory use.
+  const scaledW = Math.round(WIDTH * IMAGE_FILL_RATIO);
+  const scaledH = Math.round(HEIGHT * IMAGE_FILL_RATIO);
 
   const filterComplex =
     `[0:v]scale=${scaledW}:${scaledH}:force_original_aspect_ratio=decrease,` +
-    `pad=${WIDTH * 2}:${HEIGHT * 2}:(ow-iw)/2:(oh-ih)/2:color=white,` +
+    `pad=${WIDTH}:${HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=white,` +
     `zoompan=z='${zoomExpr}':x='${kb.x}':y='${kb.y}':d=${frames}:s=${WIDTH}x${HEIGHT}:fps=${FPS}[bg];` +
     `[bg][1:v]overlay=0:0:format=auto,format=yuv420p[out]`;
 
@@ -279,8 +281,10 @@ async function buildImageClip(
     "-an",
     "-c:v",
     "libx264",
+    "-threads",
+    "2",
     "-preset",
-    "veryfast",
+    "faster",
     "-pix_fmt",
     "yuv420p",
     outPath,
@@ -314,8 +318,10 @@ async function buildStaticClip(imagePath, overlayPath, durationSec, outPath) {
     "-an",
     "-c:v",
     "libx264",
+    "-threads",
+    "2",
     "-preset",
-    "veryfast",
+    "faster",
     "-pix_fmt",
     "yuv420p",
     outPath,
