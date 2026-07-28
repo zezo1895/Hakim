@@ -30,7 +30,7 @@ function TempBadge({ temp }) {
   );
 }
 
-function FilterRow({ label, options, active, onChange }) {
+function FilterRow({ label, options, active, onChange, displayMapper }) {
   return (
     <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap mb-4">
       <span className="text-xs font-bold text-gray-400 pt-2 shrink-0 w-16">{label}</span>
@@ -47,7 +47,7 @@ function FilterRow({ label, options, active, onChange }) {
                 : "bg-white text-gray-600 border border-gray-200 hover:border-brand-blue hover:text-brand-blue"
             }`}
           >
-            {c}
+            {displayMapper ? displayMapper(c) : c}
           </motion.button>
         ))}
       </div>
@@ -152,6 +152,14 @@ export default function Products() {
   const [categoriesList, setCategoriesList] = useState(["الكل"]);
   const [materialsList, setMaterialsList] = useState(["الكل"]);
   const [typesList, setTypesList] = useState(["الكل"]);
+  
+  const getMaterialLabel = (mat) => {
+    if (mat === "الكل") return "الكل";
+    if (mat.toUpperCase() === "PP") return "من -20°C إلى 120°C";
+    if (mat.toUpperCase() === "PET") return "من -40°C إلى 70°C";
+    if (mat.toUpperCase() === "PS") return "من -10°C إلى 85°C";
+    return mat; 
+  };
 
   // لو المستخدم غيّر رابط الصفحة (مثلاً رجع من كارت قطاع تاني) نحدّث الفلتر
   useEffect(() => {
@@ -186,7 +194,7 @@ export default function Products() {
         const data = await response.json();
         setProducts(Array.isArray(data) ? data : []);
         
-        // استخراج قوائم الخامات والأنواع الفريدة
+        // استخراج قوائم الفئات والخامات والأنواع الفريدة
         if (Array.isArray(data) && data.length > 0) {
           const cats = [...new Set(data.map(p => p.material_category).filter(Boolean))];
           const materials = [...new Set(data.map(p => p.material_name).filter(Boolean))];
@@ -308,10 +316,11 @@ export default function Products() {
               onChange={handleCategoryChange}
             />
             <FilterRow 
-              label="الخامة" 
+              label="درجات الحرارة" 
               options={materialsList} 
               active={activeMaterial} 
-              onChange={setActiveMaterial} 
+              onChange={setActiveMaterial}
+              displayMapper={getMaterialLabel}
             />
             <FilterRow 
               label="النوع" 
@@ -322,7 +331,7 @@ export default function Products() {
             
             {/* عرض عدد النتائج */}
             <div className="text-xs text-gray-400 mt-2">
-              {filtered.length} منتج {activeCategory !== "الكل" && `في ${activeCategory}`} {activeMaterial !== "الكل" && `من ${activeMaterial}`} {activeType !== "الكل" && `من نوع ${activeType}`}
+              {filtered.length} منتج {activeCategory !== "الكل" && `في ${activeCategory}`} {activeMaterial !== "الكل" && `(تحمل حراري: ${getMaterialLabel(activeMaterial)})`} {activeType !== "الكل" && `من نوع ${activeType}`}
             </div>
           </div>
 

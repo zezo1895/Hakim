@@ -1818,6 +1818,7 @@ export default function Admin() {
   const [showSettings, setShowSettings] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterMaterial, setFilterMaterial] = useState("");
   const [sortMode, setSortMode] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -1960,7 +1961,8 @@ export default function Admin() {
             const matchS =
               !search || p.name.includes(search) || p.code?.includes(search);
             const matchT = !filterType || p.type_id === Number(filterType);
-            return matchS && matchT;
+            const matchM = !filterMaterial || p.material_id === Number(filterMaterial);
+            return matchS && matchT && matchM;
           })
           .map((p) => p.id);
 
@@ -1970,7 +1972,7 @@ export default function Admin() {
     } else {
       setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])]);
     }
-  }, [products, search, filterType, selectedIds, sortMode]);
+  }, [products, search, filterType, filterMaterial, selectedIds, sortMode]);
 
   // ── إلغاء التحديد ──
   const clearSelection = useCallback(() => setSelectedIds([]), []);
@@ -2045,7 +2047,8 @@ export default function Admin() {
         const matchS =
           !search || p.name.includes(search) || p.code?.includes(search);
         const matchT = !filterType || p.type_id === Number(filterType);
-        return matchS && matchT;
+        const matchM = !filterMaterial || p.material_id === Number(filterMaterial);
+        return matchS && matchT && matchM;
       });
 
   // ── تحميل البيانات ──
@@ -2265,19 +2268,35 @@ export default function Admin() {
             />
           </div>
           {!sortMode && (
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
-                         focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
-            >
-              <option value="">كل الأنواع</option>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
+            <>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
+                           focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              >
+                <option value="">كل الأنواع</option>
+                {types.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filterMaterial}
+                onChange={(e) => setFilterMaterial(e.target.value)}
+                className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
+                           focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              >
+                <option value="">كل الخامات</option>
+                {materialGroups.flatMap((g) => g.materials || []).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
 
           {/* أزرار التحديد الجماعي */}
