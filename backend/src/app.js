@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 require("dotenv").config();
 
@@ -9,8 +11,27 @@ require("./config/db");
 
 const productRoutes = require("./routes/productRoutes");
 const videoRoutes = require("./routes/videoRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
+
+// إعداد السيرفر للعمل خلف Reverse Proxy (مهم عشان Railway)
+app.set("trust proxy", 1);
+
+// إضافة حماية الـ Headers الأساسية
+app.use(helmet({
+  crossOriginResourcePolicy: false, // عشان الصور والفيديوهات تظهر عادي لو من دومين تاني
+}));
+
+// نظام الحماية من الـ Spam (Rate Limiting)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 دقيقة
+  max: 300, // أقصى حد 300 طلب لكل IP خلال الـ 15 دقيقة
+  message: { error: "طلبات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
 
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
@@ -53,6 +74,7 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "x-admin-secret",
+      "Authorization",
     ],
   })
 );
@@ -69,6 +91,7 @@ app.use(
 );
 
 // Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/video", videoRoutes);
 

@@ -29,10 +29,11 @@ import {
   CheckSquare,
   Square,
   Copy,
+  LogOut,
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const SECRET = import.meta.env.VITE_ADMIN_SECRET;
+const ADMIN_AUTH_KEY = "hakim_admin_token";
 
 // ─────────────────────────────────────────────────────────────
 // Reusable helpers
@@ -44,11 +45,13 @@ const apiFetch = (path, opts = {}) => {
       ? "/products"
       : `/products${path}`;
 
+  const token = localStorage.getItem(ADMIN_AUTH_KEY);
+
   return fetch(`${API}${cleanPath}`, {
     ...opts,
     headers: {
       ...opts.headers,
-      "x-admin-secret": SECRET,
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     },
   });
 };
@@ -1523,22 +1526,35 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
   );
 }
 
-const ADMIN_AUTH_KEY = "hakim_admin_ok";
-
 // ─────────────────────────────────────────────────────────────
 // Admin Login
 // ─────────────────────────────────────────────────────────────
 function AdminLogin({ onSuccess }) {
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (SECRET && input === SECRET) {
-      localStorage.setItem(ADMIN_AUTH_KEY, "1");
-      onSuccess();
-    } else {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: input })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem(ADMIN_AUTH_KEY, data.token);
+        onSuccess();
+      } else {
+        setError(true);
+      }
+    } catch (err) {
       setError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -1578,9 +1594,10 @@ function AdminLogin({ onSuccess }) {
         )}
         <button
           type="submit"
-          className="w-full py-3 rounded-2xl bg-brand-blue text-white font-bold hover:opacity-90 transition"
+          disabled={loading}
+          className="w-full py-3 rounded-2xl bg-brand-blue text-white font-bold hover:opacity-90 transition disabled:opacity-50"
         >
-          دخول
+          {loading ? "جاري الدخول..." : "دخول"}
         </button>
       </form>
     </div>
@@ -1798,12 +1815,7 @@ export default function Admin() {
   const [params] = useSearchParams();
 
   const [authed, setAuthed] = useState(() => {
-    const fromUrl = params.get("secret");
-    if (fromUrl && SECRET && fromUrl === SECRET) {
-      localStorage.setItem(ADMIN_AUTH_KEY, "1");
-      return true;
-    }
-    return localStorage.getItem(ADMIN_AUTH_KEY) === "1";
+    return !!localStorage.getItem(ADMIN_AUTH_KEY);
   });
 
   const [products, setProducts] = useState([]);
@@ -2164,6 +2176,16 @@ export default function Admin() {
             >
               <Settings size={15} />
               إعدادات شاشة العرض
+            </button>
+            <button
+              onClick={() => {
+                localStorage.removeItem(ADMIN_AUTH_KEY);
+                setAuthed(false);
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-red-500/20 border border-red-400/50 text-red-100 hover:bg-red-500/40 transition"
+            >
+              <LogOut size={15} />
+              خروج
             </button>
             <button
               onClick={() => {
