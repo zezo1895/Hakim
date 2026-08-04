@@ -69,8 +69,8 @@ exports.create = async (req, res) => {
 
     await model.setLids(pid, parsedLids);
 
-    if (convert_manual_lid_id) {
-      await model.convertManualLidToRealLid(convert_manual_lid_id, pid);
+    if (convert_manual_lid_id) { const mlId = parseInt(convert_manual_lid_id, 10); if (!isNaN(mlId)) {
+      await model.convertManualLidToRealLid(mlId, pid); }
     }
 
     res.status(201).json({ id: pid });
@@ -166,3 +166,25 @@ exports.remove = async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 };
+exports.getManualLids = async (req, res) => {
+  try {
+    const lids = await model.getAllManualLids();
+    res.json(lids);
+  } catch (e) {
+    console.error('Error fetching manual lids:', e.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+exports.deleteManualLid = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    await model.deleteManualLid(id);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Error deleting manual lid:', e.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+

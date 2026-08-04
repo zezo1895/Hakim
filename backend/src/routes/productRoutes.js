@@ -31,22 +31,9 @@ router.get("/search/lids",         ctrl.searchLids);
 router.put("/reorder",             adminAuth, ctrl.reorder);
 router.get("/",                    ctrl.getAll);
 
-// ── Manual Lids Routes ──────────────────────────────────
-router.get("/manual-lids",         adminAuth, async (req, res) => {
-  try {
-    const model = require("../models/productModel");
-    const lids = await model.getAllManualLids();
-    res.json(lids);
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-router.delete("/manual-lids/:id",  adminAuth, async (req, res) => {
-  try {
-    const model = require("../models/productModel");
-    await model.deleteManualLid(req.params.id);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
+// 🛠️ Manual Lids Routes ───────────────────────────────────────────────────
+router.get("/manual-lids",         adminAuth, ctrl.getManualLids);
+router.delete("/manual-lids/:id",  adminAuth, ctrl.deleteManualLid);
 
 router.get("/:id",                 ctrl.getOne);
 router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
