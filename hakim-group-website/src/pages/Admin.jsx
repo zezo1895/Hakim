@@ -33,6 +33,7 @@ import {
   Square,
   Copy,
   LogOut,
+  BarChart3
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
