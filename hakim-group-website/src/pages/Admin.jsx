@@ -1846,7 +1846,9 @@ export default function Admin() {
   const [showSettings, setShowSettings] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterMaterialCat, setFilterMaterialCat] = useState("");
   const [filterMaterial, setFilterMaterial] = useState("");
+  const [filterGroup, setFilterGroup] = useState("");
   const [sortMode, setSortMode] = useState(false);
   const [savingOrder, setSavingOrder] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -1990,7 +1992,9 @@ export default function Admin() {
               !search || p.name.includes(search) || p.code?.includes(search);
             const matchT = !filterType || p.type_id === filterType;
             const matchM = !filterMaterial || p.material_id === filterMaterial;
-            return matchS && matchT && matchM;
+            const matchMCat = !filterMaterialCat || materialGroups.find(c => c.id === filterMaterialCat)?.materials?.some(m => m.id === p.material_id);
+            const matchG = !filterGroup || p.group_id === filterGroup;
+            return matchS && matchT && matchM && matchMCat && matchG;
           })
           .map((p) => p.id);
 
@@ -2000,7 +2004,7 @@ export default function Admin() {
     } else {
       setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])]);
     }
-  }, [products, search, filterType, filterMaterial, selectedIds, sortMode]);
+  }, [products, search, filterType, filterMaterial, filterMaterialCat, filterGroup, selectedIds, sortMode, materialGroups]);
 
   // ── إلغاء التحديد ──
   const clearSelection = useCallback(() => setSelectedIds([]), []);
@@ -2076,7 +2080,9 @@ export default function Admin() {
           !search || p.name.includes(search) || p.code?.includes(search);
         const matchT = !filterType || p.type_id === filterType;
         const matchM = !filterMaterial || p.material_id === filterMaterial;
-        return matchS && matchT && matchM;
+        const matchMCat = !filterMaterialCat || materialGroups.find(c => c.id === filterMaterialCat)?.materials?.some(m => m.id === p.material_id);
+        const matchG = !filterGroup || p.group_id === filterGroup;
+        return matchS && matchT && matchM && matchMCat && matchG;
       });
 
   // ── تحميل البيانات ──
@@ -2388,18 +2394,54 @@ export default function Admin() {
               </select>
 
               <select
+                value={filterMaterialCat}
+                onChange={(e) => {
+                  setFilterMaterialCat(e.target.value);
+                  setFilterMaterial("");
+                }}
+                className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
+                           focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              >
+                <option value="">كل فئات الخامات</option>
+                {materialGroups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
                 value={filterMaterial}
                 onChange={(e) => setFilterMaterial(e.target.value)}
                 className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               >
-                <option value="">كل الخامات</option>
-                {materialGroups.flatMap((g) => g.materials || []).map((m) => (
+                <option value="">كل الخامات التفصيلية</option>
+                {materialGroups
+                  .filter(g => !filterMaterialCat || g.id === filterMaterialCat)
+                  .flatMap((g) => g.materials || [])
+                  .map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
                   </option>
                 ))}
               </select>
+
+              <select
+                value={filterGroup}
+                onChange={(e) => setFilterGroup(e.target.value)}
+                className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
+                           focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+              >
+                <option value="">كل المجموعات</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+
+            
             </>
           )}
 
