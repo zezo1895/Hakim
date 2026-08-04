@@ -2959,15 +2959,39 @@ export default function Admin() {
                   
                   {viewProduct.lids && viewProduct.lids.length > 0 && (
                     <div className="mb-4">
-                      <h4 className="font-bold text-sm text-gray-700 mb-2">الأغطية المرتبطة:</h4>
-                      <div className="flex flex-wrap gap-2">
+                      <h4 className="font-bold text-sm text-gray-700 mb-3">الأغطية المرتبطة:</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {viewProduct.lids.map(lid => (
-                          <div key={lid.id} className="bg-blue-50 border border-blue-100 text-brand-blue px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">
-                            {lid.thumbnail && !lid.isManual && (
-                              <img src={lid.thumbnail} alt="" className="w-5 h-5 object-contain" />
+                          <div key={lid.id} className="bg-white border border-gray-100 shadow-sm rounded-2xl p-3 flex items-center gap-3 hover:border-brand-blue hover:shadow-md transition-all">
+                            {lid.thumbnail && !lid.isManual ? (
+                              <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center shrink-0 border border-gray-100 overflow-hidden p-1">
+                                <img src={lid.thumbnail} alt="" className="w-full h-full object-contain drop-shadow-sm" />
+                              </div>
+                            ) : (
+                              <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 border ${lid.isManual ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100'}`}>
+                                <Package size={24} className={lid.isManual ? 'text-orange-300' : 'text-gray-300'} />
+                              </div>
                             )}
-                            {lid.name}
-                            {lid.isManual && <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px]">يدوي</span>}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {lid.code && !lid.isManual && (
+                                  <span className="text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                    {lid.code}
+                                  </span>
+                                )}
+                                {lid.isManual && (
+                                  <span className="text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded">
+                                    يدوي
+                                  </span>
+                                )}
+                              </div>
+                              <h5 className="font-bold text-gray-800 text-sm truncate" title={lid.name}>
+                                {lid.name}
+                              </h5>
+                              {lid.material_name && (
+                                <p className="text-xs text-gray-400 mt-0.5">{lid.material_name}</p>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
