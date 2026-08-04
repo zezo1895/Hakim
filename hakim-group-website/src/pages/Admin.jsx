@@ -1838,6 +1838,7 @@ export default function Admin() {
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [deleteManualLidConfirm, setDeleteManualLidConfirm] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
@@ -2319,18 +2320,7 @@ export default function Admin() {
                     إنشاء
                   </button>
                   <button
-                    onClick={async () => {
-                      if (!window.confirm("هل أنت متأكد من حذف هذا الغطاء اليدوي؟")) return;
-                      try {
-                        const res = await apiFetch(`/manual-lids/${ml.id}`, { method: "DELETE" });
-                        if (res.success) {
-                          notify("تم حذف الغطاء اليدوي بنجاح", "success");
-                          load();
-                        }
-                      } catch (e) {
-                        notify("خطأ أثناء الحذف: " + e.message, "error");
-                      }
-                    }}
+                    onClick={() => setDeleteManualLidConfirm(ml)}
                     className="bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors p-1.5 rounded-lg"
                     title="حذف"
                   >
@@ -2744,18 +2734,9 @@ export default function Admin() {
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={async () => {
-                    if (!window.confirm("هل أنت متأكد من الحذف النهائي لهذا الغطاء اليدوي؟")) return;
-                    try {
-                      const res = await apiFetch(`/manual-lids/${viewManualLid.id}`, { method: "DELETE" });
-                      if (res.success) {
-                        notify("تم حذف الغطاء اليدوي بنجاح", "success");
-                        setViewManualLid(null);
-                        load();
-                      }
-                    } catch (e) {
-                      notify("خطأ أثناء الحذف: " + e.message, "error");
-                    }
+                  onClick={() => {
+                    setDeleteManualLidConfirm(viewManualLid);
+                    setViewManualLid(null);
                   }}
                   className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90 flex items-center justify-center gap-2"
                 >
@@ -2818,6 +2799,57 @@ export default function Admin() {
 
       <AnimatePresence>
         {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteManualLidConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4"
+          >
+            <motion.div
+              dir="rtl"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={28} className="text-red-500" />
+              </div>
+              <h3 className="font-extrabold text-xl text-gray-800 mb-2">
+                حذف الغطاء اليدوي؟
+              </h3>
+              <p className="text-sm text-gray-500 mb-7">
+                هل أنت متأكد من الحذف النهائي للغطاء ({deleteManualLidConfirm.name})؟
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiFetch(`/manual-lids/${deleteManualLidConfirm.id}`, { method: "DELETE" });
+                      notify("تم حذف الغطاء اليدوي بنجاح", "success");
+                      setDeleteManualLidConfirm(null);
+                      load();
+                    } catch (e) {
+                      notify("خطأ أثناء الحذف: " + e.message, "error");
+                    }
+                  }}
+                  className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90"
+                >
+                  نعم، احذف
+                </button>
+                <button
+                  onClick={() => setDeleteManualLidConfirm(null)}
+                  className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
