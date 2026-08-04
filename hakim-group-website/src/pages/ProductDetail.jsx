@@ -208,7 +208,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
 
   // الحصول على الأغطية بدون الأغطية اليدوية
   const productLids = product.lids && product.lids.length > 0
-    ? product.lids.filter(lid => !lid.isManual && !lid.manual && lid.source !== 'manual')
+    ? product.lids.filter(lid => isPopup ? true : (!lid.isManual && !lid.manual && lid.source !== 'manual'))
     : [];
 
   return (
@@ -419,6 +419,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                       const lidImage = typeof lid === 'object' ? lid.thumbnail : null;
                       const lidId = typeof lid === 'object' && !lid.isManual && lid.id ? lid.id : null;
                       
+                      const isLidManual = typeof lid === 'object' && (lid.isManual || lid.manual || lid.source === 'manual');
                       const innerContent = (
                         <>
                           {lidImage ? (
@@ -437,7 +438,12 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                               <span className="w-2.5 h-2.5 rounded-full bg-brand-green" />
                             </div>
                           )}
-                          <span className="flex-1 font-bold text-gray-800 text-sm sm:text-base leading-tight" title={lidName}>{lidName}</span>
+                          <div className="flex-1 flex flex-col justify-center">
+                            <span className="font-bold text-gray-800 text-sm sm:text-base leading-tight" title={lidName}>{lidName}</span>
+                            {isLidManual && (
+                              <span className="text-[10px] text-orange-500 font-bold mt-1 bg-orange-50 w-fit px-1.5 py-0.5 rounded">غطاء يدوي</span>
+                            )}
+                          </div>
                         </>
                       );
                       
