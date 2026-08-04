@@ -2288,13 +2288,20 @@ export default function Admin() {
             </div>
             <div className="flex flex-wrap gap-3">
               {manualLids.map((ml) => (
-                <div key={ml.id} className="flex items-center gap-3 bg-white border border-orange-100 rounded-xl py-2 px-3 shadow-sm">
-                  <span className="font-bold text-gray-700">{ml.name}</span>
+                <div key={ml.id} className="flex items-center gap-2 bg-white border border-orange-100 rounded-xl py-2 px-3 shadow-sm">
+                  <button 
+                    onClick={() => alert(`??? ?????? ?????? (${ml.name}) ????? ????????? ???????:\n\n${ml.linked_products || '?? ???? ?????? ??????'}`)}
+                    className="font-bold text-gray-700 hover:text-brand-blue flex items-center gap-1 transition-colors"
+                    title="??? ???????? ????????"
+                  >
+                    {ml.name}
+                    <AlertCircle size={14} className="text-gray-400" />
+                  </button>
+                  <div className="w-px h-5 bg-gray-200 mx-1"></div>
                   <button
                     onClick={() => {
                       setEditTarget(null);
-                      // نبحث عن id الـ "غطاء" في أنواع المنتجات ليتم تحديده افتراضياً
-                      const lidType = types.find(t => t.name === "غطاء");
+                      const lidType = types.find(t => t.name === "????");
                       setShowForm({
                         isManualLidConversion: true,
                         manualLidId: ml.id,
@@ -2305,9 +2312,28 @@ export default function Admin() {
                       });
                     }}
                     className="bg-brand-blue text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-brand-blueDark transition-colors flex items-center gap-1.5"
+                    title="????? ???? ?????"
                   >
                     <Plus size={14} />
-                    إنشاء كمنتج
+                    ?????
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm("?? ??? ????? ?? ??? ??? ?????? ???????")) return;
+                      try {
+                        const res = await apiFetch(`/manual-lids/${ml.id}`, { method: "DELETE" });
+                        if (res.success) {
+                          notify("?? ??? ?????? ?????? ?????", "success");
+                          load();
+                        }
+                      } catch (e) {
+                        notify("??? ????? ?????: " + e.message, "error");
+                      }
+                    }}
+                    className="bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors p-1.5 rounded-lg"
+                    title="???"
+                  >
+                    <Trash2 size={16} />
                   </button>
                 </div>
               ))}
@@ -2735,3 +2761,4 @@ export default function Admin() {
     </div>
   );
 }
+
