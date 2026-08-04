@@ -87,8 +87,9 @@ function TempIcon({ temp, size = 22 }) {
   );
 }
 
-export default function ProductDetail() {
-  const { id } = useParams();
+export default function ProductDetail({ popupId, isPopup = false }) {
+  const { id: paramId } = useParams();
+  const id = popupId || paramId;
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [sameGroupProducts, setSameGroupProducts] = useState([]);
@@ -203,21 +204,23 @@ export default function ProductDetail() {
     : [];
 
   return (
-    <div dir="rtl" className="pt-20 min-h-screen bg-[#fafafa]">
+    <div dir="rtl" className={isPopup ? "bg-[#fafafa]" : "pt-20 min-h-screen bg-[#fafafa]"}>
       {/* Breadcrumb strip */}
-      <div className="border-b border-gray-100 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-xs text-gray-400">
-          <Link to="/products" className="hover:text-brand-blue transition-colors font-semibold">
-            الكتالوج
-          </Link>
-          <ChevronLeft size={13} />
-          <span className="text-gray-500">{product.material_name || 'منتج'}</span>
-          <ChevronLeft size={13} />
-          <span className="text-gray-700 font-semibold truncate">{product.name}</span>
+      {!isPopup && (
+        <div className="border-b border-gray-100 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-xs text-gray-400">
+            <Link to="/products" className="hover:text-brand-blue transition-colors font-semibold">
+              الكتالوج
+            </Link>
+            <ChevronLeft size={13} />
+            <span className="text-gray-500">{product.material_name || 'منتج'}</span>
+            <ChevronLeft size={13} />
+            <span className="text-gray-700 font-semibold truncate">{product.name}</span>
+          </div>
         </div>
-      </div>
+      )}
 
-      <section className="py-10 sm:py-14 px-4 sm:px-6 lg:px-8">
+      <section className={isPopup ? "py-4 px-2 sm:px-4" : "py-10 sm:py-14 px-4 sm:px-6 lg:px-8"}>
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-start">
             {/* ===== Gallery ===== */}
