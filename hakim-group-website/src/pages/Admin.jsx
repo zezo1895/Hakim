@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { grantTVAccess } from "../components/TVGate";
 import { motion, AnimatePresence } from "framer-motion";
@@ -2249,7 +2249,14 @@ export default function Admin() {
               }`}
             >
               <Settings size={15} />
-              Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø£Ù†ÙˆØ§Ø¹ ÙˆØ§Ù„Ø®Ø§Ù…Ø§Øª
+              إدارة الأنواع والخامات
+            </button>
+            <button
+              onClick={() => setShowAnalytics(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border border-brand-orange/30 text-brand-orange hover:bg-brand-orange hover:text-white transition"
+            >
+              <BarChart3 size={15} />
+              إحصائيات الموقع
             </button>
             <button
               onClick={() => {
@@ -2942,6 +2949,14 @@ export default function Admin() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* نافذة الإحصائيات */}
+      {showAnalytics && (
+        <AnalyticsModal
+          authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
+          onClose={() => setShowAnalytics(false)}
+        />
+      )}
     </div>
   );
 }
