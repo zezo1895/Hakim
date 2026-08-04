@@ -210,9 +210,12 @@ exports.updateGroup = (id, groupId) =>
 exports.remove = (id) => db.query("DELETE FROM products WHERE id = ?", [id]);
 
 // ── Images ─────────────────────────────────────────────────
-exports.addImage      = (pid, url, pub, sort) =>
-  db.query("INSERT INTO product_images (product_id,url,public_id,sort_order) VALUES (?,?,?,?)",
-    [pid, url, pub, sort]);
+exports.addImage = async (pid, url, pub, sort) => {
+  const id = crypto.randomUUID();
+  await db.query("INSERT INTO product_images (id,product_id,url,public_id,sort_order) VALUES (?,?,?,?,?)",
+    [id, pid, url, pub, sort]);
+  return id;
+};
 exports.getImages     = (pid) =>
   db.query("SELECT * FROM product_images WHERE product_id=? ORDER BY sort_order", [pid]);
 exports.deleteImage   = (id)  =>
@@ -229,11 +232,12 @@ exports.addManualLid = async (name) => {
   if (existing.length > 0) {
     return existing[0].id;
   }
-  const [result] = await db.query(
-    "INSERT INTO manual_lids (name) VALUES (?)",
-    [name]
+  const id = crypto.randomUUID();
+  await db.query(
+    "INSERT INTO manual_lids (id, name) VALUES (?, ?)",
+    [id, name]
   );
-  return result.insertId;
+  return id;
 };
 
 exports.getAllManualLids = async () => {
