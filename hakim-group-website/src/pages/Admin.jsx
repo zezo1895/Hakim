@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Trash2,
+  Eye,
   Pencil,
   X,
   Upload,
@@ -1833,6 +1834,7 @@ export default function Admin() {
   const [manualLids, setManualLids] = useState([]);
   const [showManualLidsBox, setShowManualLidsBox] = useState(false);
   const [viewManualLid, setViewManualLid] = useState(null);
+  const [viewProduct, setViewProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -2644,14 +2646,23 @@ export default function Admin() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
+                            onClick={() => setViewProduct(p)}
+                            className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                            title="عرض التفاصيل"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button
                             onClick={() => openEdit(p)}
                             className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-brand-blue transition-colors"
+                            title="تعديل"
                           >
                             <Pencil size={15} />
                           </button>
                           <button
                             onClick={() => setDeleteId(p.id)}
                             className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                            title="حذف"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -2846,6 +2857,121 @@ export default function Admin() {
                 >
                   إلغاء
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {viewProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[130] bg-black/60 flex items-center justify-center p-4 backdrop-blur-sm"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setViewProduct(null);
+            }}
+          >
+            <motion.div
+              dir="rtl"
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-3xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative"
+            >
+              <button
+                onClick={() => setViewProduct(null)}
+                className="absolute top-6 left-6 p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="w-full md:w-1/2">
+                  <div className="aspect-square bg-gray-50 rounded-2xl border border-gray-100 p-4 mb-4 flex items-center justify-center overflow-hidden">
+                    {viewProduct.images && viewProduct.images.length > 0 ? (
+                      <img 
+                        src={viewProduct.images[0].url} 
+                        alt={viewProduct.name} 
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <Package size={64} className="text-gray-200" />
+                    )}
+                  </div>
+                  {viewProduct.images && viewProduct.images.length > 1 && (
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {viewProduct.images.map((img, i) => (
+                        <div key={i} className="w-16 h-16 shrink-0 bg-gray-50 rounded-lg border border-gray-100 p-1 flex items-center justify-center">
+                          <img src={img.url} alt="" className="w-full h-full object-contain" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="w-full md:w-1/2 flex flex-col justify-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-brand-blue/10 text-brand-blue px-3 py-1 rounded-full text-xs font-bold">
+                      {viewProduct.code}
+                    </span>
+                    <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-full text-xs font-bold">
+                      {viewProduct.type_name}
+                    </span>
+                  </div>
+                  
+                  <h2 className="text-2xl font-extrabold text-gray-800 mb-4">{viewProduct.name}</h2>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="text-xs text-gray-400 mb-1">المادة</div>
+                      <div className="font-bold text-gray-700">{viewProduct.material_name}</div>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="text-xs text-gray-400 mb-1">المقاس</div>
+                      <div className="font-bold text-gray-700">{viewProduct.size || "-"}</div>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="text-xs text-gray-400 mb-1">الحرارة</div>
+                      <div className="font-bold text-gray-700">
+                        {viewProduct.temp === "hot" ? "ساخن" : viewProduct.temp === "cold" ? "بارد" : "ساخن وبارد"}
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="text-xs text-gray-400 mb-1">المجموعة</div>
+                      <div className="font-bold text-gray-700">{viewProduct.group_name || "-"}</div>
+                    </div>
+                  </div>
+                  
+                  {viewProduct.lids && viewProduct.lids.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="font-bold text-sm text-gray-700 mb-2">الأغطية المرتبطة:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {viewProduct.lids.map(lid => (
+                          <div key={lid.id} className="bg-blue-50 border border-blue-100 text-brand-blue px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2">
+                            {lid.thumbnail && !lid.isManual && (
+                              <img src={lid.thumbnail} alt="" className="w-5 h-5 object-contain" />
+                            )}
+                            {lid.name}
+                            {lid.isManual && <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded text-[10px]">يدوي</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {viewProduct.notes && (
+                    <div className="mb-4">
+                      <h4 className="font-bold text-sm text-gray-700 mb-2">ملاحظات:</h4>
+                      <div className="bg-yellow-50 text-yellow-800 p-3 rounded-xl text-sm leading-relaxed border border-yellow-100">
+                        {viewProduct.notes}
+                      </div>
+                    </div>
+                  )}
+                  
+                </div>
               </div>
             </motion.div>
           </motion.div>
