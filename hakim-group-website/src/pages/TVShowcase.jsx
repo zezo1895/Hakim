@@ -438,17 +438,17 @@ export default function TVShowcase({
 
   const groupIds = useMemo(() => {
     const raw = searchParams.get("groups");
-    return raw ? raw.split(",").map((s) => Number(s.trim())).filter(Boolean) : [];
+    return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
   }, [searchParams]);
 
   const productIds = useMemo(() => {
     const raw = searchParams.get("products");
-    return raw ? raw.split(",").map((s) => Number(s.trim())).filter(Boolean) : [];
+    return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
   }, [searchParams]);
 
   const explicitOrder = useMemo(() => {
     const raw = searchParams.get("order");
-    return raw ? raw.split(",").map((s) => Number(s.trim())).filter(Boolean) : [];
+    return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
   }, [searchParams]);
 
   // ← هنا التصحيح المهم
