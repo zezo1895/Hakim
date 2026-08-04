@@ -254,13 +254,11 @@ exports.deleteManualLid = async (id) => {
 
 // تحويل غطاء يدوي إلى غطاء حقيقي
 exports.convertManualLidToRealLid = async (manualLidId, newRealLidId) => {
-  // جلب كل المنتجات التي تستخدم الغطاء اليدوي
   const [rows] = await db.query(
     "SELECT product_id FROM product_manual_lids WHERE manual_lid_id = ?",
     [manualLidId]
   );
   
-  // ربط هذه المنتجات بالغطاء الحقيقي الجديد
   if (rows.length > 0) {
     const values = rows.map(r => [r.product_id, newRealLidId]);
     await db.query(
@@ -269,33 +267,27 @@ exports.convertManualLidToRealLid = async (manualLidId, newRealLidId) => {
     );
   }
   
-  // حذف الارتباطات القديمة
   await db.query("DELETE FROM product_manual_lids WHERE manual_lid_id = ?", [manualLidId]);
   
-  // حذف الغطاء اليدوي
   await db.query("DELETE FROM manual_lids WHERE id = ?", [manualLidId]);
 };
 
 exports.setLids = async (productId, lidData = []) => {
-  // حذف الروابط القديمة
   await db.query("DELETE FROM product_lids WHERE product_id=?", [productId]);
   await db.query("DELETE FROM product_manual_lids WHERE product_id=?", [productId]);
   
   if (!lidData.length) return;
   
-  // فصل الأغطية
   const existingLids = lidData.filter(l => !l.manual);
   const manualLids = lidData.filter(l => l.manual);
   
-  // إضافة الأغطية الموجودة في قاعدة البيانات
   if (existingLids.length) {
     await db.query(
       "INSERT INTO product_lids (product_id, lid_id) VALUES ?",
-      [existingLids.map((l) => [productId, Number(l)])]
+      [existingLids.map((l) => [productId, l.id || l])]
     );
   }
   
-  // إضافة الأغطية اليدوية
   if (manualLids.length) {
     for (const manual of manualLids) {
       const manualId = await exports.addManualLid(manual.name);

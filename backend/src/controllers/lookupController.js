@@ -14,8 +14,8 @@ const makeCrud = (getAll, create, update, remove) => ({
     try {
       const { name, category_id } = req.body;
       if (!name?.trim()) return res.status(400).json({ error: "name required" });
-      const [r] = await create(category_id, name.trim());
-      res.status(201).json({ id: r.insertId, name: name.trim(), category_id });
+      const id = await create(category_id, name.trim());
+      res.status(201).json({ id, name: name.trim(), category_id });
     } catch (e) {
       if (e.code === "ER_DUP_ENTRY")
         return res.status(409).json({ error: "موجود بالفعل" });

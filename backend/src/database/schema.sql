@@ -8,22 +8,22 @@ USE hakim_group;
 
 -- أنواع المنتجات (كوب، طبق، علبة، غطاء، سلطانية ...) — قابلة للإضافة من لوحة التحكم
 CREATE TABLE product_types (
-  id         INT PRIMARY KEY AUTO_INCREMENT,
+  id         VARCHAR(36) PRIMARY KEY,
   name       VARCHAR(100) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- فئات الخامات الرئيسية (بلاستيك، كرتون، فوم ...)
 CREATE TABLE material_categories (
-  id         INT PRIMARY KEY AUTO_INCREMENT,
+  id         VARCHAR(36) PRIMARY KEY,
   name       VARCHAR(100) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- الخامات الفرعية تحت كل فئة
 CREATE TABLE materials (
-  id          INT PRIMARY KEY AUTO_INCREMENT,
-  category_id INT NOT NULL,
+  id          VARCHAR(36) PRIMARY KEY,
+  category_id VARCHAR(36) NOT NULL,
   name        VARCHAR(100) NOT NULL,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (category_id) REFERENCES material_categories(id) ON DELETE CASCADE,
@@ -32,20 +32,20 @@ CREATE TABLE materials (
 
 -- Groups (parent categories for size siblings)
 CREATE TABLE product_groups (
-  id         INT PRIMARY KEY AUTO_INCREMENT,
+  id         VARCHAR(36) PRIMARY KEY,
   name       VARCHAR(100) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Core products table
 CREATE TABLE products (
-  id          INT PRIMARY KEY AUTO_INCREMENT,
+  id          VARCHAR(36) PRIMARY KEY,
   name        VARCHAR(255) NOT NULL,
   code        VARCHAR(100),
-  type_id     INT DEFAULT NULL,
-  material_id INT DEFAULT NULL,
+  type_id     VARCHAR(36) DEFAULT NULL,
+  material_id VARCHAR(36) DEFAULT NULL,
   temp        ENUM('hot','cold','both') NOT NULL DEFAULT 'both',
-  group_id    INT DEFAULT NULL,
+  group_id    VARCHAR(36) DEFAULT NULL,
   size        VARCHAR(100),
   notes       TEXT,
   sort_order  INT NOT NULL DEFAULT 0,
@@ -62,8 +62,8 @@ CREATE TABLE products (
 
 -- Product images (multiple per product, stored as Cloudinary URLs)
 CREATE TABLE product_images (
-  id          INT PRIMARY KEY AUTO_INCREMENT,
-  product_id  INT NOT NULL,
+  id          VARCHAR(36) PRIMARY KEY,
+  product_id  VARCHAR(36) NOT NULL,
   url         VARCHAR(500) NOT NULL,
   public_id   VARCHAR(255) NOT NULL,   -- needed for Cloudinary deletion
   sort_order  INT DEFAULT 0,
@@ -73,8 +73,8 @@ CREATE TABLE product_images (
 
 -- Matching lids (many-to-many: a product can have multiple lid options)
 CREATE TABLE product_lids (
-  product_id  INT NOT NULL,
-  lid_id      INT NOT NULL,            -- lid_id references another product of type 'غطاء'
+  product_id  VARCHAR(36) NOT NULL,
+  lid_id      VARCHAR(36) NOT NULL,            -- lid_id references another product of type 'غطاء'
   PRIMARY KEY (product_id, lid_id),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
   FOREIGN KEY (lid_id)     REFERENCES products(id) ON DELETE CASCADE
@@ -85,15 +85,15 @@ CREATE TABLE product_lids (
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS manual_lids (
-  id INT PRIMARY KEY AUTO_INCREMENT,
+  id VARCHAR(36) PRIMARY KEY,
   name VARCHAR(255) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_name (name)
 );
 
 CREATE TABLE IF NOT EXISTS product_manual_lids (
-  product_id INT NOT NULL,
-  manual_lid_id INT NOT NULL,
+  product_id VARCHAR(36) NOT NULL,
+  manual_lid_id VARCHAR(36) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (product_id, manual_lid_id),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,

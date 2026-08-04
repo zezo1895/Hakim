@@ -30,7 +30,7 @@ exports.reorder = async (req, res) => {
     if (!Array.isArray(order) || !order.length) {
       return res.status(400).json({ error: "order (array of ids) required" });
     }
-    await model.reorder(order.map(Number));
+    await model.reorder(order.map(String));
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
@@ -60,8 +60,7 @@ exports.create = async (req, res) => {
       }
     }
 
-    const [r] = await model.create({ name, code, type_id, material_id, temp, group_id, size, notes });
-    const pid  = r.insertId;
+    const pid = await model.create({ name, code, type_id, material_id, temp, group_id, size, notes });
 
     if (req.files?.length)
       for (let i = 0; i < req.files.length; i++)
@@ -69,8 +68,8 @@ exports.create = async (req, res) => {
 
     await model.setLids(pid, parsedLids);
 
-    if (convert_manual_lid_id) { const mlId = parseInt(convert_manual_lid_id, 10); if (!isNaN(mlId)) {
-      await model.convertManualLidToRealLid(mlId, pid); }
+    if (convert_manual_lid_id) { 
+      await model.convertManualLidToRealLid(convert_manual_lid_id, pid); 
     }
 
     res.status(201).json({ id: pid });
@@ -178,8 +177,8 @@ exports.getManualLids = async (req, res) => {
 
 exports.deleteManualLid = async (req, res) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ error: 'Invalid ID' });
     await model.deleteManualLid(id);
     res.json({ success: true });
   } catch (e) {
