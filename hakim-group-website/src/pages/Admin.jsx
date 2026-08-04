@@ -1835,6 +1835,7 @@ export default function Admin() {
   const [showManualLidsBox, setShowManualLidsBox] = useState(false);
   const [viewManualLid, setViewManualLid] = useState(null);
   const [viewProduct, setViewProduct] = useState(null);
+  const [viewProductImageIndex, setViewProductImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -2646,7 +2647,10 @@ export default function Admin() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => setViewProduct(p)}
+                            onClick={() => {
+                              setViewProduct(p);
+                              setViewProductImageIndex(0);
+                            }}
                             className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
                             title="عرض التفاصيل"
                           >
@@ -2890,23 +2894,31 @@ export default function Admin() {
               
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="w-full md:w-1/2">
-                  <div className="aspect-square bg-gray-50 rounded-2xl border border-gray-100 p-4 mb-4 flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-square bg-white rounded-3xl border border-gray-100 shadow-sm p-4 mb-4 flex items-center justify-center overflow-hidden group">
                     {viewProduct.images && viewProduct.images.length > 0 ? (
-                      <img 
-                        src={viewProduct.images[0].url} 
+                      <motion.img 
+                        key={viewProductImageIndex}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                        src={viewProduct.images[viewProductImageIndex].url} 
                         alt={viewProduct.name} 
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-contain drop-shadow-xl"
                       />
                     ) : (
                       <Package size={64} className="text-gray-200" />
                     )}
                   </div>
                   {viewProduct.images && viewProduct.images.length > 1 && (
-                    <div className="flex gap-2 overflow-x-auto pb-2">
+                    <div className="flex gap-3 overflow-x-auto pb-2 p-1">
                       {viewProduct.images.map((img, i) => (
-                        <div key={i} className="w-16 h-16 shrink-0 bg-gray-50 rounded-lg border border-gray-100 p-1 flex items-center justify-center">
-                          <img src={img.url} alt="" className="w-full h-full object-contain" />
-                        </div>
+                        <button
+                          key={i}
+                          onClick={() => setViewProductImageIndex(i)}
+                          className={`w-16 h-16 shrink-0 rounded-xl border-2 transition-all duration-300 overflow-hidden flex items-center justify-center ${viewProductImageIndex === i ? 'border-brand-blue shadow-md scale-105' : 'border-transparent bg-gray-50 hover:bg-gray-100 opacity-60 hover:opacity-100'}`}
+                        >
+                          <img src={img.url} alt="" className="w-full h-full object-cover" />
+                        </button>
                       ))}
                     </div>
                   )}
@@ -2922,26 +2934,26 @@ export default function Admin() {
                     </span>
                   </div>
                   
-                  <h2 className="text-2xl font-extrabold text-gray-800 mb-4">{viewProduct.name}</h2>
+                  <h2 className="text-2xl font-extrabold text-gray-800 mb-6">{viewProduct.name}</h2>
                   
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="text-xs text-gray-400 mb-1">المادة</div>
-                      <div className="font-bold text-gray-700">{viewProduct.material_name}</div>
+                  <div className="grid grid-cols-2 gap-4 mb-8">
+                    <div className="bg-gradient-to-br from-white to-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="text-xs text-gray-500 mb-1 flex items-center gap-1.5"><Package size={14}/> المادة</div>
+                      <div className="font-extrabold text-gray-800 text-lg">{viewProduct.material_name}</div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="text-xs text-gray-400 mb-1">المقاس</div>
-                      <div className="font-bold text-gray-700">{viewProduct.size || "-"}</div>
+                    <div className="bg-gradient-to-br from-white to-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="text-xs text-gray-500 mb-1 flex items-center gap-1.5"><Package size={14}/> المقاس</div>
+                      <div className="font-extrabold text-gray-800 text-lg">{viewProduct.size || "-"}</div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="text-xs text-gray-400 mb-1">الحرارة</div>
-                      <div className="font-bold text-gray-700">
+                    <div className="bg-gradient-to-br from-white to-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="text-xs text-gray-500 mb-1 flex items-center gap-1.5"><Package size={14}/> الحرارة</div>
+                      <div className="font-extrabold text-gray-800 text-lg">
                         {viewProduct.temp === "hot" ? "ساخن" : viewProduct.temp === "cold" ? "بارد" : "ساخن وبارد"}
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="text-xs text-gray-400 mb-1">المجموعة</div>
-                      <div className="font-bold text-gray-700">{viewProduct.group_name || "-"}</div>
+                    <div className="bg-gradient-to-br from-white to-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                      <div className="text-xs text-gray-500 mb-1 flex items-center gap-1.5"><Package size={14}/> المجموعة</div>
+                      <div className="font-extrabold text-gray-800 text-lg">{viewProduct.group_name || "-"}</div>
                     </div>
                   </div>
                   

@@ -1,4 +1,4 @@
-// src/pages/ProductDetail.jsx
+﻿// src/pages/ProductDetail.jsx
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,56 +19,56 @@ import Loader from "../components/Loader";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-// ⚠️ غيّر الرقم ده برقم الواتساب بتاع الشركة (بصيغة دولية بدون + أو أصفار في الأول)
-// مثال لمصر: 201001234567
+// âš ï¸ ØºÙŠÙ‘Ø± Ø§Ù„Ø±Ù‚Ù… Ø¯Ù‡ Ø¨Ø±Ù‚Ù… Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨ Ø¨ØªØ§Ø¹ Ø§Ù„Ø´Ø±ÙƒØ© (Ø¨ØµÙŠØºØ© Ø¯ÙˆÙ„ÙŠØ© Ø¨Ø¯ÙˆÙ† + Ø£Ùˆ Ø£ØµÙØ§Ø± ÙÙŠ Ø§Ù„Ø£ÙˆÙ„)
+// Ù…Ø«Ø§Ù„ Ù„Ù…ØµØ±: 201001234567
 const WHATSAPP_NUMBER = "201144505575";
 
-// بناء رسالة تفصيلية كاملة عن المنتج (الاسم، الكود، الخامة، النوع، المقاس، الحرارة، رابط الصورة، ورابط صفحة المنتج)
+// Ø¨Ù†Ø§Ø¡ Ø±Ø³Ø§Ù„Ø© ØªÙØµÙŠÙ„ÙŠØ© ÙƒØ§Ù…Ù„Ø© Ø¹Ù† Ø§Ù„Ù…Ù†ØªØ¬ (Ø§Ù„Ø§Ø³Ù…ØŒ Ø§Ù„ÙƒÙˆØ¯ØŒ Ø§Ù„Ø®Ø§Ù…Ø©ØŒ Ø§Ù„Ù†ÙˆØ¹ØŒ Ø§Ù„Ù…Ù‚Ø§Ø³ØŒ Ø§Ù„Ø­Ø±Ø§Ø±Ø©ØŒ Ø±Ø§Ø¨Ø· Ø§Ù„ØµÙˆØ±Ø©ØŒ ÙˆØ±Ø§Ø¨Ø· ØµÙØ­Ø© Ø§Ù„Ù…Ù†ØªØ¬)
 function buildWhatsappMessage(product, imageUrl) {
   const lines = [
-    "مرحباً، أريد طلب تسعير للمنتج التالي:",
+    "Ù…Ø±Ø­Ø¨Ø§Ù‹ØŒ Ø£Ø±ÙŠØ¯ Ø·Ù„Ø¨ ØªØ³Ø¹ÙŠØ± Ù„Ù„Ù…Ù†ØªØ¬ Ø§Ù„ØªØ§Ù„ÙŠ:",
     "",
-    `📦 *الاسم:* ${product.name}`,
+    `ðŸ“¦ *Ø§Ù„Ø§Ø³Ù…:* ${product.name}`,
   ];
 
-  if (product.code) lines.push(`🔖 *الكود:* ${product.code}`);
-  if (product.material_name) lines.push(`🧱 *الخامة:* ${product.material_name}`);
-  if (product.type_name) lines.push(`🏷️ *النوع:* ${product.type_name}`);
-  if (product.size) lines.push(`📏 *المقاس:* ${product.size}`);
+  if (product.code) lines.push(`ðŸ”– *Ø§Ù„ÙƒÙˆØ¯:* ${product.code}`);
+  if (product.material_name) lines.push(`ðŸ§± *Ø§Ù„Ø®Ø§Ù…Ø©:* ${product.material_name}`);
+  if (product.type_name) lines.push(`ðŸ·ï¸ *Ø§Ù„Ù†ÙˆØ¹:* ${product.type_name}`);
+  if (product.size) lines.push(`ðŸ“ *Ø§Ù„Ù…Ù‚Ø§Ø³:* ${product.size}`);
   if (product.temp) {
-    const tempLabel = product.temp === "both" ? "ساخن وبارد" : product.temp === "hot" ? "ساخن" : "بارد";
-    lines.push(`🌡️ *يتحمل:* ${tempLabel}`);
+    const tempLabel = product.temp === "both" ? "Ø³Ø§Ø®Ù† ÙˆØ¨Ø§Ø±Ø¯" : product.temp === "hot" ? "Ø³Ø§Ø®Ù†" : "Ø¨Ø§Ø±Ø¯";
+    lines.push(`ðŸŒ¡ï¸ *ÙŠØªØ­Ù…Ù„:* ${tempLabel}`);
   }
 
   lines.push("");
-  lines.push(`🔗 *رابط المنتج:* ${window.location.href}`);
+  lines.push(`ðŸ”— *Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ù†ØªØ¬:* ${window.location.href}`);
 
   if (imageUrl) {
-    lines.push(`🖼️ *صورة المنتج:* ${imageUrl}`);
+    lines.push(`ðŸ–¼ï¸ *ØµÙˆØ±Ø© Ø§Ù„Ù…Ù†ØªØ¬:* ${imageUrl}`);
   }
 
   return encodeURIComponent(lines.join("\n"));
 }
 
 const materialTone = {
-  "بلاستيك": { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200" },
-  "كرتون":   { text: "text-amber-800", bg: "bg-amber-50", ring: "ring-amber-200" },
-  "فوم":     { text: "text-violet-700", bg: "bg-violet-50", ring: "ring-violet-200" },
+  "Ø¨Ù„Ø§Ø³ØªÙŠÙƒ": { text: "text-sky-700", bg: "bg-sky-50", ring: "ring-sky-200" },
+  "ÙƒØ±ØªÙˆÙ†":   { text: "text-amber-800", bg: "bg-amber-50", ring: "ring-amber-200" },
+  "ÙÙˆÙ…":     { text: "text-violet-700", bg: "bg-violet-50", ring: "ring-violet-200" },
 };
 
-// نص ولون ووصف حالة الحرارة: ساخن / بارد / يتحمل الاتنين
+// Ù†Øµ ÙˆÙ„ÙˆÙ† ÙˆÙˆØµÙ Ø­Ø§Ù„Ø© Ø§Ù„Ø­Ø±Ø§Ø±Ø©: Ø³Ø§Ø®Ù† / Ø¨Ø§Ø±Ø¯ / ÙŠØªØ­Ù…Ù„ Ø§Ù„Ø§ØªÙ†ÙŠÙ†
 function tempInfo(temp) {
   if (temp === "both") {
     return {
-      label: "ساخن وبارد",
-      desc: "يتحمل الاستخدام الساخن والبارد معاً",
+      label: "Ø³Ø§Ø®Ù† ÙˆØ¨Ø§Ø±Ø¯",
+      desc: "ÙŠØªØ­Ù…Ù„ Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø³Ø§Ø®Ù† ÙˆØ§Ù„Ø¨Ø§Ø±Ø¯ Ù…Ø¹Ø§Ù‹",
       color: "text-emerald-600",
     };
   }
   if (temp === "hot") {
-    return { label: "ساخن", desc: "يتحمل الحرارة العالية", color: "text-orange-600" };
+    return { label: "Ø³Ø§Ø®Ù†", desc: "ÙŠØªØ­Ù…Ù„ Ø§Ù„Ø­Ø±Ø§Ø±Ø© Ø§Ù„Ø¹Ø§Ù„ÙŠØ©", color: "text-orange-600" };
   }
-  return { label: "بارد", desc: "للاستخدام البارد والمبرد", color: "text-sky-600" };
+  return { label: "Ø¨Ø§Ø±Ø¯", desc: "Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø¨Ø§Ø±Ø¯ ÙˆØ§Ù„Ù…Ø¨Ø±Ø¯", color: "text-sky-600" };
 }
 
 function TempIcon({ temp, size = 22 }) {
@@ -97,14 +97,14 @@ export default function ProductDetail() {
   const [activeImg, setActiveImg] = useState(0);
   const [zoomed, setZoomed] = useState(false);
 
-  // جلب بيانات المنتج والمنتجات المرتبطة
+  // Ø¬Ù„Ø¨ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ù†ØªØ¬ ÙˆØ§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø©
   useEffect(() => {
     const fetchProductData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // جلب المنتج الحالي
+        // Ø¬Ù„Ø¨ Ø§Ù„Ù…Ù†ØªØ¬ Ø§Ù„Ø­Ø§Ù„ÙŠ
         const productResponse = await fetch(`${API}/products/${id}`);
         if (!productResponse.ok) {
           throw new Error(`Failed to fetch product: ${productResponse.status}`);
@@ -112,7 +112,7 @@ export default function ProductDetail() {
         const productData = await productResponse.json();
         setProduct(productData);
 
-        // جلب جميع المنتجات للعثور على المنتجات المرتبطة
+        // Ø¬Ù„Ø¨ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ù„Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø©
         const allProductsResponse = await fetch(`${API}/products`);
         if (!allProductsResponse.ok) {
           throw new Error(`Failed to fetch all products: ${allProductsResponse.status}`);
@@ -120,7 +120,7 @@ export default function ProductDetail() {
         const allProducts = await allProductsResponse.json();
 
         if (Array.isArray(allProducts)) {
-          // المنتجات من نفس المجموعة (نفس المقاسات المختلفة)
+          // Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ù…Ù† Ù†ÙØ³ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© (Ù†ÙØ³ Ø§Ù„Ù…Ù‚Ø§Ø³Ø§Øª Ø§Ù„Ù…Ø®ØªÙ„ÙØ©)
           const sameGroup = allProducts.filter(
             (p) => 
               p.group_id === productData.group_id && 
@@ -130,7 +130,7 @@ export default function ProductDetail() {
           );
           setSameGroupProducts(sameGroup);
 
-          // منتجات من نفس الخامة (باستثناء نفس المجموعة)
+          // Ù…Ù†ØªØ¬Ø§Øª Ù…Ù† Ù†ÙØ³ Ø§Ù„Ø®Ø§Ù…Ø© (Ø¨Ø§Ø³ØªØ«Ù†Ø§Ø¡ Ù†ÙØ³ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©)
           const sameMaterial = allProducts
             .filter(
               (p) => 
@@ -143,7 +143,7 @@ export default function ProductDetail() {
         }
       } catch (err) {
         console.error("Error fetching product:", err);
-        setError("فشل تحميل بيانات المنتج. يرجى المحاولة مرة أخرى.");
+        setError("ÙØ´Ù„ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ù†ØªØ¬. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.");
       } finally {
         setLoading(false);
       }
@@ -154,7 +154,7 @@ export default function ProductDetail() {
     }
   }, [id]);
 
-  // التنقل بين الصور
+  // Ø§Ù„ØªÙ†Ù‚Ù„ Ø¨ÙŠÙ† Ø§Ù„ØµÙˆØ±
   const nextImage = () => {
     setActiveImg((prev) => (prev + 1) % productImages.length);
   };
@@ -163,44 +163,40 @@ export default function ProductDetail() {
     setActiveImg((prev) => (prev - 1 + productImages.length) % productImages.length);
   };
 
-  // عرض حالة التحميل
+  // Ø¹Ø±Ø¶ Ø­Ø§Ù„Ø© Ø§Ù„ØªØ­Ù…ÙŠÙ„
   if (loading) {
-    return <Loader label="جاري تحميل المنتج" />;
+    return <Loader label="Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ù…Ù†ØªØ¬" />;
   }
 
-  // عرض حالة الخطأ
+  // Ø¹Ø±Ø¶ Ø­Ø§Ù„Ø© Ø§Ù„Ø®Ø·Ø£
   if (error || !product) {
     return (
       <div dir="rtl" className="pt-32 pb-20 text-center min-h-screen">
         <div className="max-w-md mx-auto">
-          <div className="text-6xl mb-4">😅</div>
-          <p className="text-gray-500 mb-4">{error || "المنتج غير موجود."}</p>
+          <div className="text-6xl mb-4">ðŸ˜…</div>
+          <p className="text-gray-500 mb-4">{error || "Ø§Ù„Ù…Ù†ØªØ¬ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯."}</p>
           <Link 
             to="/products" 
             className="inline-flex items-center gap-2 text-brand-blue font-semibold hover:underline"
           >
             <ChevronLeft size={16} />
-            العودة للكتالوج
+            Ø§Ù„Ø¹ÙˆØ¯Ø© Ù„Ù„ÙƒØªØ§Ù„ÙˆØ¬
           </Link>
         </div>
       </div>
     );
   }
 
-  const hasLids = Array.isArray(product.lids) && product.lids.length > 0;
+  // Ø§Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø§Ù„Ø£ØºØ·ÙŠØ© Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠØ© ÙÙ‚Ø·
+  const productLids = product.lids && product.lids.length > 0
+    ? product.lids.filter(lid => !lid.isManual && !lid.manual && lid.source !== 'manual')
+    : [];
+
+  const hasLids = productLids.length > 0;
   const hasCode = Boolean(product.code);
   const hasNotes = Boolean(product.notes);
-  const tone = materialTone[product.material_name] || materialTone["بلاستيك"];
-  
-  // الحصول على صور المنتج
-  const productImages = product.images && product.images.length > 0 
-    ? product.images.map(img => img.url || img) 
-    : ['/placeholder-image.jpg'];
-
-  // الحصول على الأغطية
-  const productLids = product.lids && product.lids.length > 0
-    ? product.lids
-    : [];
+  const tone = materialTone[product.material_name] || materialTone['بلاستيك'];
+  const productImages = product.images && product.images.length > 0 ? product.images.map(img => img.url || img) : ['/placeholder-image.jpg'];
 
   return (
     <div dir="rtl" className="pt-20 min-h-screen bg-[#fafafa]">
@@ -208,10 +204,10 @@ export default function ProductDetail() {
       <div className="border-b border-gray-100 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-xs text-gray-400">
           <Link to="/products" className="hover:text-brand-blue transition-colors font-semibold">
-            الكتالوج
+            Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬
           </Link>
           <ChevronLeft size={13} />
-          <span className="text-gray-500">{product.material_name || 'منتج'}</span>
+          <span className="text-gray-500">{product.material_name || 'Ù…Ù†ØªØ¬'}</span>
           <ChevronLeft size={13} />
           <span className="text-gray-700 font-semibold truncate">{product.name}</span>
         </div>
@@ -227,7 +223,7 @@ export default function ProductDetail() {
               transition={{ duration: 0.5 }}
               className="lg:sticky lg:top-28"
             >
-              {/* الصورة الرئيسية - محسنة للعرض الكامل */}
+              {/* Ø§Ù„ØµÙˆØ±Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© - Ù…Ø­Ø³Ù†Ø© Ù„Ù„Ø¹Ø±Ø¶ Ø§Ù„ÙƒØ§Ù…Ù„ */}
               <div className="relative w-full rounded-3xl overflow-hidden bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.05)] h-96 sm:h-[30rem] lg:h-[32rem]">
                 <button
                   onClick={() => setZoomed(true)}
@@ -250,7 +246,7 @@ export default function ProductDetail() {
                     />
                   </AnimatePresence>
                   
-                  {/* طبقة التكبير */}
+                  {/* Ø·Ø¨Ù‚Ø© Ø§Ù„ØªÙƒØ¨ÙŠØ± */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
                     <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110">
                       <ZoomIn size={28} className="text-brand-blue" />
@@ -258,7 +254,7 @@ export default function ProductDetail() {
                   </div>
                 </button>
 
-                {/* أزرار التنقل بين الصور */}
+                {/* Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„ Ø¨ÙŠÙ† Ø§Ù„ØµÙˆØ± */}
                 {productImages.length > 1 && (
                   <>
                     <button
@@ -276,12 +272,12 @@ export default function ProductDetail() {
                   </>
                 )}
 
-                {/* عداد الصور */}
+                {/* Ø¹Ø¯Ø§Ø¯ Ø§Ù„ØµÙˆØ± */}
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-white text-xs font-mono">
                   {activeImg + 1} / {productImages.length}
                 </div>
 
-                {/* بادجات اضافية */}
+                {/* Ø¨Ø§Ø¯Ø¬Ø§Øª Ø§Ø¶Ø§ÙÙŠØ© */}
                 {product.size && (
                   <span className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm text-xs font-bold text-gray-700 shadow-md border border-gray-100">
                     {product.size}
@@ -294,7 +290,7 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              {/* معرض الصور المصغرة - محسن (تلتف لسطر جديد بدل ما تخرج بره الكونتينر) */}
+              {/* Ù…Ø¹Ø±Ø¶ Ø§Ù„ØµÙˆØ± Ø§Ù„Ù…ØµØºØ±Ø© - Ù…Ø­Ø³Ù† (ØªÙ„ØªÙ Ù„Ø³Ø·Ø± Ø¬Ø¯ÙŠØ¯ Ø¨Ø¯Ù„ Ù…Ø§ ØªØ®Ø±Ø¬ Ø¨Ø±Ù‡ Ø§Ù„ÙƒÙˆÙ†ØªÙŠÙ†Ø±) */}
               {productImages.length > 1 && (
                 <div className="flex flex-wrap gap-3 mt-4 px-1">
                   {productImages.map((img, i) => (
@@ -309,7 +305,7 @@ export default function ProductDetail() {
                     >
                       <img 
                         src={img} 
-                        alt={`صورة ${i + 1}`}
+                        alt={`ØµÙˆØ±Ø© ${i + 1}`}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
@@ -335,7 +331,7 @@ export default function ProductDetail() {
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ring-1 ${tone.bg} ${tone.text} ${tone.ring} mb-4`}
               >
                 <Layers size={12} />
-                خامة {product.material_name || 'غير محدد'}
+                Ø®Ø§Ù…Ø© {product.material_name || 'ØºÙŠØ± Ù…Ø­Ø¯Ø¯'}
               </span>
 
               <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-tight mb-3">
@@ -345,7 +341,7 @@ export default function ProductDetail() {
               {product.size && (
                 <span className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-500 mb-5">
                   <Ruler size={14} className="text-gray-400" />
-                  المقاس: <span className="text-gray-800">{product.size}</span>
+                  Ø§Ù„Ù…Ù‚Ø§Ø³: <span className="text-gray-800">{product.size}</span>
                 </span>
               )}
 
@@ -363,7 +359,7 @@ export default function ProductDetail() {
 
                   <div className="flex-1 p-4 sm:p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">درجة الاستخدام</span>
+                      <span className="text-xs text-gray-400">Ø¯Ø±Ø¬Ø© Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…</span>
                       <span className="text-sm font-bold text-gray-700">
                         {tempInfo(product.temp || 'both').desc}
                       </span>
@@ -373,7 +369,7 @@ export default function ProductDetail() {
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
                           <Hash size={12} />
-                          كود المنتج
+                          ÙƒÙˆØ¯ Ø§Ù„Ù…Ù†ØªØ¬
                         </span>
                         <span className="font-mono font-bold text-gray-800 tracking-wide">
                           {product.code}
@@ -385,7 +381,7 @@ export default function ProductDetail() {
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                         <span className="inline-flex items-center gap-1.5 text-xs text-gray-400">
                           <Layers size={12} />
-                          فئة الخامة
+                          ÙØ¦Ø© Ø§Ù„Ø®Ø§Ù…Ø©
                         </span>
                         <span className="text-sm font-bold text-gray-700">
                           {product.material_category}
@@ -400,7 +396,7 @@ export default function ProductDetail() {
               {hasLids && (
                 <div className="mb-6">
                   <h3 className="text-sm font-extrabold text-gray-800 mb-3">
-                    الأغطية المتوافقة مع هذا المنتج
+                    Ø§Ù„Ø£ØºØ·ÙŠØ© Ø§Ù„Ù…ØªÙˆØ§ÙÙ‚Ø© Ù…Ø¹ Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†ØªØ¬
                   </h3>
                   <div className="grid sm:grid-cols-2 gap-2.5">
                     {productLids.map((lid, i) => {
@@ -462,17 +458,17 @@ export default function ProductDetail() {
                 className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-green text-white font-bold rounded-2xl shadow-[0_10px_30px_rgba(45,122,58,0.25)] hover:opacity-95 transition-opacity"
               >
                 <MessageCircle size={18} />
-                طلب تسعير هذا المنتج عبر الواتساب
+                Ø·Ù„Ø¨ ØªØ³Ø¹ÙŠØ± Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†ØªØ¬ Ø¹Ø¨Ø± Ø§Ù„ÙˆØ§ØªØ³Ø§Ø¨
               </motion.a>
             </motion.div>
           </div>
 
-          {/* ===== أصناف مشابهة (تم التعديل هنا) ===== */}
+          {/* ===== Ø£ØµÙ†Ø§Ù Ù…Ø´Ø§Ø¨Ù‡Ø© (ØªÙ… Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ Ù‡Ù†Ø§) ===== */}
           {sameGroupProducts.length > 0 && (
             <div className="mt-16 pt-10 border-t border-gray-100">
               <div className="flex items-center gap-2 mb-5">
                 <Layers size={18} className="text-brand-blue" />
-                <h3 className="text-lg font-extrabold text-gray-800">أصناف مشابهة</h3>
+                <h3 className="text-lg font-extrabold text-gray-800">Ø£ØµÙ†Ø§Ù Ù…Ø´Ø§Ø¨Ù‡Ø©</h3>
                 <span className="text-sm text-gray-400 mr-2">({sameGroupProducts.length})</span>
               </div>
               <div className="grid sm:grid-cols-3 gap-5">
@@ -495,7 +491,7 @@ export default function ProductDetail() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                          <span className="text-gray-400 text-sm">لا توجد صورة</span>
+                          <span className="text-gray-400 text-sm">Ù„Ø§ ØªÙˆØ¬Ø¯ ØµÙˆØ±Ø©</span>
                         </div>
                       )}
                       {p.size && (
@@ -505,7 +501,7 @@ export default function ProductDetail() {
                       )}
                     </div>
                     <div className="p-4">
-                      {/* عرض اسم المنتج بدلاً من المقاس */}
+                      {/* Ø¹Ø±Ø¶ Ø§Ø³Ù… Ø§Ù„Ù…Ù†ØªØ¬ Ø¨Ø¯Ù„Ø§Ù‹ Ù…Ù† Ø§Ù„Ù…Ù‚Ø§Ø³ */}
                       <p className="text-sm font-bold text-gray-800 mb-1 line-clamp-1">{p.name}</p>
                       {p.code && (
                         <span className="font-mono text-[10px] text-gray-400">{p.code}</span>
@@ -521,7 +517,7 @@ export default function ProductDetail() {
           {relatedProducts.length > 0 && (
             <div className={sameGroupProducts.length > 0 ? "mt-12" : "mt-16 pt-10 border-t border-gray-100"}>
               <h3 className="text-lg font-extrabold text-gray-800 mb-5">
-                منتجات أخرى من {product.material_name || 'نفس الخامة'}
+                Ù…Ù†ØªØ¬Ø§Øª Ø£Ø®Ø±Ù‰ Ù…Ù† {product.material_name || 'Ù†ÙØ³ Ø§Ù„Ø®Ø§Ù…Ø©'}
               </h3>
               <div className="grid sm:grid-cols-3 gap-5">
                 {relatedProducts.map((p) => (
@@ -543,7 +539,7 @@ export default function ProductDetail() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                          <span className="text-gray-400 text-sm">لا توجد صورة</span>
+                          <span className="text-gray-400 text-sm">Ù„Ø§ ØªÙˆØ¬Ø¯ ØµÙˆØ±Ø©</span>
                         </div>
                       )}
                     </div>
@@ -588,7 +584,7 @@ export default function ProductDetail() {
               <X size={24} />
             </button>
             
-            {/* أزرار التنقل في وضع التكبير */}
+            {/* Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªÙ†Ù‚Ù„ ÙÙŠ ÙˆØ¶Ø¹ Ø§Ù„ØªÙƒØ¨ÙŠØ± */}
             {productImages.length > 1 && (
               <>
                 <button
@@ -627,7 +623,7 @@ export default function ProductDetail() {
               }}
             />
 
-            {/* عداد الصور في وضع التكبير */}
+            {/* Ø¹Ø¯Ø§Ø¯ Ø§Ù„ØµÙˆØ± ÙÙŠ ÙˆØ¶Ø¹ Ø§Ù„ØªÙƒØ¨ÙŠØ± */}
             {productImages.length > 1 && (
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm text-white text-sm font-mono">
                 {activeImg + 1} / {productImages.length}
