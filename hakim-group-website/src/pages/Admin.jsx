@@ -1826,12 +1826,12 @@ export default function Admin() {
   const [authed, setAuthed] = useState(() => {
     return !!localStorage.getItem(ADMIN_AUTH_KEY);
   });
-
   const [products, setProducts] = useState([]);
   const [types, setTypes] = useState([]);
   const [materialGroups, setMaterialGroups] = useState([]);
   const [groups, setGroups] = useState([]);
   const [manualLids, setManualLids] = useState([]);
+  const [showManualLidsBox, setShowManualLidsBox] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
