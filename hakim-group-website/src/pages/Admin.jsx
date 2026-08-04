@@ -1114,7 +1114,7 @@ function ProductFormModal({
 
   const [selectedCatId, setSelectedCatId] = useState("");
   const subMaterials =
-    materialGroups.find((g) => g.id === Number(selectedCatId))?.materials || [];
+    materialGroups.find((g) => g.id === selectedCatId)?.materials || [];
 
   useEffect(() => {
     if (!editProduct) return;
@@ -1988,8 +1988,8 @@ export default function Admin() {
           .filter((p) => {
             const matchS =
               !search || p.name.includes(search) || p.code?.includes(search);
-            const matchT = !filterType || p.type_id === Number(filterType);
-            const matchM = !filterMaterial || p.material_id === Number(filterMaterial);
+            const matchT = !filterType || p.type_id === filterType;
+            const matchM = !filterMaterial || p.material_id === filterMaterial;
             return matchS && matchT && matchM;
           })
           .map((p) => p.id);
@@ -2074,8 +2074,8 @@ export default function Admin() {
     : products.filter((p) => {
         const matchS =
           !search || p.name.includes(search) || p.code?.includes(search);
-        const matchT = !filterType || p.type_id === Number(filterType);
-        const matchM = !filterMaterial || p.material_id === Number(filterMaterial);
+        const matchT = !filterType || p.type_id === filterType;
+        const matchM = !filterMaterial || p.material_id === filterMaterial;
         return matchS && matchT && matchM;
       });
 
