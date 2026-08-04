@@ -1175,7 +1175,7 @@ function ProductFormModal({
       });
 
       const lidsToSend = selectedLids.map((l) => {
-        if (l.isManual || l.manual) {
+        if (l.isManual || l.manual || l.source === 'manual') {
           return { name: l.name, manual: true };
         }
         return l.id;
@@ -1832,6 +1832,7 @@ export default function Admin() {
   const [groups, setGroups] = useState([]);
   const [manualLids, setManualLids] = useState([]);
   const [showManualLidsBox, setShowManualLidsBox] = useState(false);
+  const [viewManualLid, setViewManualLid] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -2290,9 +2291,9 @@ export default function Admin() {
               {manualLids.map((ml) => (
                 <div key={ml.id} className="flex items-center gap-2 bg-white border border-orange-100 rounded-xl py-2 px-3 shadow-sm">
                   <button 
-                    onClick={() => alert(`??? ?????? ?????? (${ml.name}) ????? ????????? ???????:\n\n${ml.linked_products || '?? ???? ?????? ??????'}`)}
+                    onClick={() => setViewManualLid(ml)}
                     className="font-bold text-gray-700 hover:text-brand-blue flex items-center gap-1 transition-colors"
-                    title="??? ???????? ????????"
+                    title="عرض المنتجات المرتبطة"
                   >
                     {ml.name}
                     <AlertCircle size={14} className="text-gray-400" />
@@ -2301,7 +2302,7 @@ export default function Admin() {
                   <button
                     onClick={() => {
                       setEditTarget(null);
-                      const lidType = types.find(t => t.name === "????");
+                      const lidType = types.find(t => t.name === "غطاء");
                       setShowForm({
                         isManualLidConversion: true,
                         manualLidId: ml.id,
@@ -2312,26 +2313,26 @@ export default function Admin() {
                       });
                     }}
                     className="bg-brand-blue text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-brand-blueDark transition-colors flex items-center gap-1.5"
-                    title="????? ???? ?????"
+                    title="إنشاء غطاء حقيقي"
                   >
                     <Plus size={14} />
-                    ?????
+                    إنشاء
                   </button>
                   <button
                     onClick={async () => {
-                      if (!window.confirm("?? ??? ????? ?? ??? ??? ?????? ???????")) return;
+                      if (!window.confirm("هل أنت متأكد من حذف هذا الغطاء اليدوي؟")) return;
                       try {
                         const res = await apiFetch(`/manual-lids/${ml.id}`, { method: "DELETE" });
                         if (res.success) {
-                          notify("?? ??? ?????? ?????? ?????", "success");
+                          notify("تم حذف الغطاء اليدوي بنجاح", "success");
                           load();
                         }
                       } catch (e) {
-                        notify("??? ????? ?????: " + e.message, "error");
+                        notify("خطأ أثناء الحذف: " + e.message, "error");
                       }
                     }}
                     className="bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors p-1.5 rounded-lg"
-                    title="???"
+                    title="حذف"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -2710,6 +2711,66 @@ export default function Admin() {
             onClose={() => setShowBulkEdit(false)}
             onSaved={notify}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {viewManualLid && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/60 flex items-center justify-center p-4"
+          >
+            <motion.div
+              dir="rtl"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl"
+            >
+              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={28} className="text-orange-500" />
+              </div>
+              <h3 className="font-extrabold text-xl text-gray-800 mb-2">
+                تفاصيل الغطاء: {viewManualLid.name}
+              </h3>
+              <div className="text-sm text-gray-500 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100 max-h-32 overflow-y-auto">
+                <div className="font-bold mb-1">مرتبط بالمنتجات التالية:</div>
+                {viewManualLid.linked_products ? (
+                  <div className="leading-relaxed">{viewManualLid.linked_products}</div>
+                ) : (
+                  <div className="text-gray-400 italic">لا يوجد منتجات مرتبطة حالياً</div>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    if (!window.confirm("هل أنت متأكد من الحذف النهائي لهذا الغطاء اليدوي؟")) return;
+                    try {
+                      const res = await apiFetch(`/manual-lids/${viewManualLid.id}`, { method: "DELETE" });
+                      if (res.success) {
+                        notify("تم حذف الغطاء اليدوي بنجاح", "success");
+                        setViewManualLid(null);
+                        load();
+                      }
+                    } catch (e) {
+                      notify("خطأ أثناء الحذف: " + e.message, "error");
+                    }
+                  }}
+                  className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90 flex items-center justify-center gap-2"
+                >
+                  <Trash2 size={16} />
+                  حذف
+                </button>
+                <button
+                  onClick={() => setViewManualLid(null)}
+                  className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

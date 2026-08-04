@@ -237,9 +237,14 @@ exports.addManualLid = async (name) => {
 };
 
 exports.getAllManualLids = async () => {
-  const [rows] = await db.query(
-    "SELECT id, name, created_at FROM manual_lids ORDER BY name"
-  );
+  const [rows] = await db.query(`
+    SELECT ml.id, ml.name, ml.created_at, GROUP_CONCAT(p.name SEPARATOR ', ') AS linked_products 
+    FROM manual_lids ml 
+    LEFT JOIN product_manual_lids pml ON pml.manual_lid_id = ml.id 
+    LEFT JOIN products p ON p.id = pml.product_id 
+    GROUP BY ml.id 
+    ORDER BY ml.name
+  `);
   return rows;
 };
 
