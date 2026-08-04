@@ -2951,6 +2951,14 @@ export default function Admin() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Analytics Modal */}
+      {showAnalytics && (
+        <AnalyticsModal
+          authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
+          onClose={() => setShowAnalytics(false)}
+        />
+      )}
     </div>
   );
 }

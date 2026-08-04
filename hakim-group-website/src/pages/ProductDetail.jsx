@@ -485,29 +485,35 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                 </div>
               )}
 
-              <motion.a
-                href={`https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsappMessage(product, productImages[0])}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-green text-white font-bold rounded-2xl shadow-[0_10px_30px_rgba(45,122,58,0.25)] hover:opacity-95 transition-opacity"
-              >
-                <MessageCircle size={18} />
-                طلب تسعير هذا المنتج عبر الواتساب
-              </motion.a>
-            </motion.div>
-              {/* Add to Quote Button */}
-              {!isPopup && (
-                <button
-                  onClick={() => addToCart(product)}
-                  className="w-full mt-6 bg-brand-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-brand-orange/20"
+              <div className="flex flex-col gap-3 mt-8">
+                {/* Add to Quote Button (Primary) */}
+                {!isPopup && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => addToCart(product)}
+                    className="relative overflow-hidden flex items-center justify-center gap-3 w-full py-4 bg-gray-900 text-white font-black text-lg rounded-2xl shadow-xl shadow-gray-900/30 transition-all group"
+                  >
+                    <span className="absolute inset-0 w-full h-full -ml-[100%] group-hover:ml-[100%] bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 transition-all duration-700 ease-in-out"></span>
+                    <ShoppingCart size={24} className="group-hover:animate-bounce" />
+                    إضافة لسلة التسعير المجمع
+                  </motion.button>
+                )}
+
+                <motion.a
+                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsappMessage(product, productImages[0])}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex items-center justify-center gap-2.5 w-full py-3.5 bg-brand-green/10 text-brand-green font-bold rounded-2xl border-2 border-brand-green hover:bg-brand-green hover:text-white transition-colors"
                 >
-                  <ShoppingCart size={20} />
-                  إضافة لطلب عرض سعر
-                </button>
-              )}
-            </div>
+                  <MessageCircle size={18} />
+                  طلب تسعير فوري للقطعة عبر الواتساب
+                </motion.a>
+              </div>
+            </motion.div>
+          </div>
 
           {/* ===== أصناف مشابهة (تم التعديل هنا) ===== */}
           {sameGroupProducts.length > 0 && (

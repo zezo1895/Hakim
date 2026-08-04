@@ -6,6 +6,7 @@ import StatsBar   from "../sections/StatsBar";
 import Sectors    from "../sections/Sectors";
 import ImpactStats from "../sections/ImpactStats";
 import Loader     from "../components/Loader";
+import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   const [ready, setReady] = useState(false);

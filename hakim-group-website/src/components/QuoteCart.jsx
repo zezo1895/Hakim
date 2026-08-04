@@ -7,7 +7,7 @@ export default function QuoteCart() {
   const { cart, removeFromCart, isCartOpen, setIsCartOpen, clearCart } = useQuote();
   
   // رقم واتساب الشركة، يمكن تغييره
-  const WHATSAPP_NUMBER = "201000000000"; // استبدله برقمك
+  const WHATSAPP_NUMBER = "201144505575"; // استبدله برقمك
 
   const handleSendQuote = () => {
     if (cart.length === 0) return;
