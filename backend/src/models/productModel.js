@@ -10,7 +10,7 @@ const parseImages = (raw) => {
   if (!raw) return [];
   return raw.split("||").map((chunk) => {
     const [id, url, public_id] = chunk.split("::");
-    return { id: Number(id), url, public_id };
+    return { id, url, public_id };
   });
 };
 //ss
@@ -177,12 +177,14 @@ exports.create = async (d) => {
     insertOrder = maxOrder + 1;
   }
 
-  return db.query(
-    `INSERT INTO products (name, code, type_id, material_id, temp, group_id, size, notes, sort_order)
-     VALUES (?,?,?,?,?,?,?,?,?)`,
-    [d.name, d.code||null, d.type_id||null, d.material_id||null,
+  const id = crypto.randomUUID();
+  await db.query(
+    `INSERT INTO products (id, name, code, type_id, material_id, temp, group_id, size, notes, sort_order)
+     VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    [id, d.name, d.code||null, d.type_id||null, d.material_id||null,
      d.temp, d.group_id||null, d.size||null, d.notes||null, insertOrder]
   );
+  return id;
 };
 
 // إعادة ترتيب المنتجات دفعة واحدة — بياخد مصفوفة IDs بالترتيب الجديد المطلوب
