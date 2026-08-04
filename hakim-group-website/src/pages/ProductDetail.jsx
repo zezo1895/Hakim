@@ -197,9 +197,9 @@ export default function ProductDetail() {
     ? product.images.map(img => img.url || img) 
     : ['/placeholder-image.jpg'];
 
-  // الحصول على أسماء الأغطية
-  const lidNames = product.lids && product.lids.length > 0
-    ? product.lids.map(lid => lid.name || lid)
+  // الحصول على الأغطية
+  const productLids = product.lids && product.lids.length > 0
+    ? product.lids
     : [];
 
   return (
@@ -403,15 +403,45 @@ export default function ProductDetail() {
                     الأغطية المتوافقة مع هذا المنتج
                   </h3>
                   <div className="grid sm:grid-cols-2 gap-2.5">
-                    {lidNames.map((lid, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-2.5 rounded-xl border border-gray-100 bg-white px-3.5 py-3 text-sm text-gray-700 font-medium"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-brand-green shrink-0" />
-                        {lid}
-                      </div>
-                    ))}
+                    {productLids.map((lid, i) => {
+                      const lidName = typeof lid === 'object' ? (lid.name || lid) : lid;
+                      const lidImage = typeof lid === 'object' ? lid.thumbnail : null;
+                      const lidId = typeof lid === 'object' && !lid.isManual && lid.id ? lid.id : null;
+                      
+                      const innerContent = (
+                        <>
+                          {lidImage ? (
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden p-2 flex items-center justify-center group-hover:bg-white transition-colors">
+                              <img 
+                                src={lidImage} 
+                                alt={lidName} 
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 flex items-center justify-center bg-gray-50 rounded-lg border border-gray-100">
+                              <span className="w-2.5 h-2.5 rounded-full bg-brand-green" />
+                            </div>
+                          )}
+                          <span className="flex-1 font-bold text-gray-800 text-sm sm:text-base leading-tight" title={lidName}>{lidName}</span>
+                        </>
+                      );
+                      
+                      const wrapperClass = "flex items-center gap-3.5 rounded-xl border border-gray-100 bg-white p-2.5 hover:shadow-md hover:border-brand-blue/30 hover:-translate-y-0.5 transition-all group";
+
+                      return lidId ? (
+                        <Link key={i} to={`/products/${lidId}`} className={wrapperClass}>
+                          {innerContent}
+                        </Link>
+                      ) : (
+                        <div key={i} className={wrapperClass}>
+                          {innerContent}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
