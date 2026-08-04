@@ -14,8 +14,11 @@ import {
   X,
   ChevronRight,
   ChevronLeft as ChevronLeftIcon,
+  ShoppingCart
 } from "lucide-react";
 import Loader from "../components/Loader";
+import { Helmet } from "react-helmet-async";
+import { useQuote } from "../context/QuoteContext";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -98,6 +101,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
   const [activeImg, setActiveImg] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const navigate = useNavigate();
+  const { addToCart } = useQuote();
 
   useEffect(() => {
     const fetchProductData = async () => {
@@ -120,6 +124,10 @@ export default function ProductDetail({ popupId, isPopup = false }) {
           throw new Error("Product not found");
         }
         setProduct(productData);
+        
+        if (!isPopup) {
+          fetch(`${API}/products/${id}/view`, { method: "POST" }).catch(console.error);
+        }
 
         // جلب جميع المنتجات للعثور على المنتجات المرتبطة
         const allProductsResponse = await fetch(`${API}/products`);
@@ -213,6 +221,13 @@ export default function ProductDetail({ popupId, isPopup = false }) {
 
   return (
     <div dir="rtl" className={isPopup ? "bg-[#fafafa]" : "pt-20 min-h-screen bg-[#fafafa]"}>
+      {!isPopup && (
+        <Helmet>
+          <title>{product.name} | مصنع حكيم</title>
+          <meta name="description" content={`اشتري ${product.name} بجودة عالية من مصنع حكيم للعبوات. الخامة: ${product.material_name}. ${product.notes || ""}`} />
+          {productImages[0] && <meta property="og:image" content={productImages[0]} />}
+        </Helmet>
+      )}
       {/* Breadcrumb strip */}
       {!isPopup && (
         <div className="border-b border-gray-100 bg-white">
@@ -482,7 +497,17 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                 طلب تسعير هذا المنتج عبر الواتساب
               </motion.a>
             </motion.div>
-          </div>
+              {/* Add to Quote Button */}
+              {!isPopup && (
+                <button
+                  onClick={() => addToCart(product)}
+                  className="w-full mt-6 bg-brand-orange hover:bg-orange-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] shadow-lg shadow-brand-orange/20"
+                >
+                  <ShoppingCart size={20} />
+                  إضافة لطلب عرض سعر
+                </button>
+              )}
+            </div>
 
           {/* ===== أصناف مشابهة (تم التعديل هنا) ===== */}
           {sameGroupProducts.length > 0 && (

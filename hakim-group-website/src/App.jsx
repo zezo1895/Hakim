@@ -14,6 +14,9 @@ import Admin from "./pages/Admin";
 import TVShowcase from "./pages/TVShowcase";
 import TVConfig from "./pages/TVConfig";
 import TVGate from "./components/TVGate";    
+import { HelmetProvider } from "react-helmet-async";
+import { QuoteProvider } from "./context/QuoteContext";
+import QuoteCart from "./components/QuoteCart";    
 
 // ─────────────────────────────────────────────────────────────
 // /tv و /tv-config صفحات مستقلة تمامًا عن الموقع الأساسي:
@@ -52,15 +55,20 @@ function AppShell() {
         </Routes>
       </main>
       <Footer />
+      <QuoteCart />
     </div>
   );
 }
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <AppShell />
-    </BrowserRouter>
+    <HelmetProvider>
+      <QuoteProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <AppShell />
+        </BrowserRouter>
+      </QuoteProvider>
+    </HelmetProvider>
   );
 }

@@ -36,6 +36,10 @@ export default function Home() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
+          <Helmet>
+            <title>الرئيسية | مصنع حكيم للعبوات</title>
+            <meta name="description" content="اكتشف مجموعة واسعة من منتجات وحلول التعبئة والتغليف بأعلى جودة من مصنع حكيم للعبوات. بلاستيك، ورق، فوم، ومواد مخصصة لتلبية احتياجات أعمالك." />
+          </Helmet>
           <Hero />
           <StatsBar />
           <Sectors />

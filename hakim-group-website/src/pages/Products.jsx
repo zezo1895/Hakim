@@ -234,6 +234,19 @@ export default function Products() {
     safePage * ITEMS_PER_PAGE
   );
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (normalizedSearch && filtered.length === 0) {
+        fetch(`${API}/products/analytics/search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: normalizedSearch })
+        }).catch(console.error);
+      }
+    }, 1000);
+    return () => clearTimeout(handler);
+  }, [normalizedSearch, filtered.length]);
+
   const handlePageChange = (page) => {
     if (page < 1 || page > totalPages) return;
     setCurrentPage(page);

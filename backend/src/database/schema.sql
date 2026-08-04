@@ -48,7 +48,8 @@ CREATE TABLE products (
   group_id    VARCHAR(36) DEFAULT NULL,
   size        VARCHAR(100),
   notes       TEXT,
-  sort_order  INT NOT NULL DEFAULT 0,
+  sort_order  INT DEFAULT 0,
+  views_count INT DEFAULT 0,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (type_id)     REFERENCES product_types(id)     ON DELETE SET NULL,
@@ -98,4 +99,10 @@ CREATE TABLE IF NOT EXISTS product_manual_lids (
   PRIMARY KEY (product_id, manual_lid_id),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
   FOREIGN KEY (manual_lid_id) REFERENCES manual_lids(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS search_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  query VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

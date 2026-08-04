@@ -19,7 +19,22 @@ const pool = mysql.createPool({
 
 // Test connection on startup
 pool.getConnection()
-  .then((c) => { console.log("✅ MySQL connected"); c.release(); })
+  .then(async (c) => { 
+    console.log("✅ MySQL connected"); 
+    try {
+      await c.query('ALTER TABLE products ADD COLUMN views_count INT DEFAULT 0');
+    } catch (e) {}
+    try {
+      await c.query(`
+        CREATE TABLE IF NOT EXISTS search_logs (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          query VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {}
+    c.release(); 
+  })
   .catch((e) => { console.error("❌ MySQL connection failed:", e.message); process.exit(1); });
 
 module.exports = pool;

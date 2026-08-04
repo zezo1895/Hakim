@@ -304,3 +304,13 @@ exports.setLids = async (productId, lidData = []) => {
     }
   }
 };
+
+// -- Analytics ----------------------------------------------
+exports.incrementViews = (id) => db.query('UPDATE products SET views_count = views_count + 1 WHERE id = ?', [id]);
+exports.logSearch = (query) => db.query('INSERT INTO search_logs (query) VALUES (?)', [query]);
+exports.getAnalytics = async () => {
+  const [topProducts] = await db.query('SELECT id, name, views_count FROM products ORDER BY views_count DESC LIMIT 10');
+  const [topSearches] = await db.query('SELECT query, COUNT(*) as count FROM search_logs GROUP BY query ORDER BY count DESC LIMIT 10');
+  return { topProducts, topSearches };
+};
+

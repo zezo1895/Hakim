@@ -187,3 +187,8 @@ exports.deleteManualLid = async (req, res) => {
   }
 };
 
+
+exports.incrementViews = async (req, res) => { try { await model.incrementViews(req.params.id); res.json({ success: true }); } catch (err) { res.status(500).json({ error: err.message }); } };
+exports.logSearch = async (req, res) => { try { if(req.body.query) await model.logSearch(req.body.query); res.json({ success: true }); } catch (err) { res.status(500).json({ error: err.message }); } };
+exports.getAnalytics = async (req, res) => { try { const data = await model.getAnalytics(); res.json(data); } catch (err) { res.status(500).json({ error: err.message }); } };
+
