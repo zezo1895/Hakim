@@ -17,6 +17,7 @@ import TVGate from "./components/TVGate";
 import { HelmetProvider } from "react-helmet-async";
 import { QuoteProvider } from "./context/QuoteContext";
 import QuoteCart from "./components/QuoteCart";    
+import AIChatBot from "./components/AIChatBot";
 
 // ─────────────────────────────────────────────────────────────
 // /tv و /tv-config صفحات مستقلة تمامًا عن الموقع الأساسي:
@@ -56,6 +57,7 @@ function AppShell() {
       </main>
       <Footer />
       <QuoteCart />
+      <AIChatBot />
     </div>
   );
 }
