@@ -48,7 +48,7 @@ exports.getOne = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids } = req.body;
+    const { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids, convert_manual_lid_id } = req.body;
     if (!name) return res.status(400).json({ error: "name required" });
 
     let parsedLids = [];
@@ -68,6 +68,11 @@ exports.create = async (req, res) => {
         await model.addImage(pid, req.files[i].path, req.files[i].filename, i);
 
     await model.setLids(pid, parsedLids);
+
+    if (convert_manual_lid_id) {
+      await model.convertManualLidToRealLid(convert_manual_lid_id, pid);
+    }
+
     res.status(201).json({ id: pid });
   } catch (e) { res.status(500).json({ error: e.message }); }
 };

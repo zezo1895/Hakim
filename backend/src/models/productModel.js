@@ -246,6 +246,30 @@ exports.deleteManualLid = async (id) => {
   await db.query("DELETE FROM manual_lids WHERE id = ?", [id]);
 };
 
+// تحويل غطاء يدوي إلى غطاء حقيقي
+exports.convertManualLidToRealLid = async (manualLidId, newRealLidId) => {
+  // جلب كل المنتجات التي تستخدم الغطاء اليدوي
+  const [rows] = await db.query(
+    "SELECT product_id FROM product_manual_lids WHERE manual_lid_id = ?",
+    [manualLidId]
+  );
+  
+  // ربط هذه المنتجات بالغطاء الحقيقي الجديد
+  if (rows.length > 0) {
+    const values = rows.map(r => [r.product_id, newRealLidId]);
+    await db.query(
+      "INSERT IGNORE INTO product_lids (product_id, lid_id) VALUES ?",
+      [values]
+    );
+  }
+  
+  // حذف الارتباطات القديمة
+  await db.query("DELETE FROM product_manual_lids WHERE manual_lid_id = ?", [manualLidId]);
+  
+  // حذف الغطاء اليدوي
+  await db.query("DELETE FROM manual_lids WHERE id = ?", [manualLidId]);
+};
+
 exports.setLids = async (productId, lidData = []) => {
   // حذف الروابط القديمة
   await db.query("DELETE FROM product_lids WHERE product_id=?", [productId]);

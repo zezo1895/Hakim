@@ -30,11 +30,6 @@ router.get("/search",              ctrl.search);
 router.get("/search/lids",         ctrl.searchLids);
 router.put("/reorder",             adminAuth, ctrl.reorder);
 router.get("/",                    ctrl.getAll);
-router.get("/:id",                 ctrl.getOne);
-router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
-router.put("/:id/group",           adminAuth, ctrl.updateGroup);
-router.put("/:id",                 adminAuth, upload.array("images", 10), ctrl.update);
-router.delete("/:id",              adminAuth, ctrl.remove);
 
 // ── Manual Lids Routes ──────────────────────────────────
 router.get("/manual-lids",         adminAuth, async (req, res) => {
@@ -52,5 +47,11 @@ router.delete("/manual-lids/:id",  adminAuth, async (req, res) => {
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+router.get("/:id",                 ctrl.getOne);
+router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
+router.put("/:id/group",           adminAuth, ctrl.updateGroup);
+router.put("/:id",                 adminAuth, upload.array("images", 10), ctrl.update);
+router.delete("/:id",              adminAuth, ctrl.remove);
 
 module.exports = router;

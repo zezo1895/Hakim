@@ -1094,8 +1094,14 @@ function ProductFormModal({
   allProducts,
   onClose,
   onSaved,
+  prefillData,
 }) {
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState(() => {
+    if (prefillData?.prefill) {
+      return { ...EMPTY, ...prefillData.prefill };
+    }
+    return EMPTY;
+  });
   const [selectedLids, setSelectedLids] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
   const [existingImgs, setExistingImgs] = useState([]);
@@ -1179,6 +1185,9 @@ function ProductFormModal({
       if (removeIds.length)
         fd.append("remove_image_ids", JSON.stringify(removeIds));
       newFiles.forEach((f) => fd.append("images", f));
+      if (prefillData?.manualLidId) {
+        fd.append("convert_manual_lid_id", prefillData.manualLidId);
+      }
 
       const url = editProduct ? `/${editProduct.id}` : "";
       const method = editProduct ? "PUT" : "POST";
@@ -1822,6 +1831,7 @@ export default function Admin() {
   const [types, setTypes] = useState([]);
   const [materialGroups, setMaterialGroups] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [manualLids, setManualLids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -2067,7 +2077,7 @@ export default function Admin() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [p, t, m, g] = await Promise.all([
+      const [p, t, m, g, ml] = await Promise.all([
         apiFetch("").then((r) => {
           if (!r.ok) throw new Error(`Failed to fetch products: ${r.status}`);
           return r.json();
@@ -2084,12 +2094,17 @@ export default function Admin() {
           if (!r.ok) throw new Error(`Failed to fetch groups: ${r.status}`);
           return r.json();
         }),
+        apiFetch("/manual-lids").then((r) => {
+          if (!r.ok) return [];
+          return r.json();
+        }).catch(() => []),
       ]);
 
       setProducts(Array.isArray(p) ? p : []);
       setTypes(Array.isArray(t) ? t : []);
       setMaterialGroups(Array.isArray(m) ? m : []);
       setGroups(Array.isArray(g) ? g : []);
+      setManualLids(Array.isArray(ml) ? ml : []);
     } catch (error) {
       console.error("Error loading data:", error);
       notify("فشل تحميل البيانات", "error");
@@ -2254,6 +2269,52 @@ export default function Admin() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+        
+        {/* الأغطية اليدوية */}
+        {manualLids.length > 0 && (
+          <div className="bg-orange-50 border border-orange-200 rounded-3xl p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <AlertCircle size={20} className="text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-orange-800">
+                  أغطية يدوية تحتاج تسجيل ({manualLids.length})
+                </h3>
+                <p className="text-sm text-orange-600/80 mt-0.5">
+                  هذه الأغطية تمت إضافتها كتابياً فقط. لربطها بصور وكود، قم بإنشائها كمنتجات حقيقية.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {manualLids.map((ml) => (
+                <div key={ml.id} className="flex items-center gap-3 bg-white border border-orange-100 rounded-xl py-2 px-3 shadow-sm">
+                  <span className="font-bold text-gray-700">{ml.name}</span>
+                  <button
+                    onClick={() => {
+                      setEditTarget(null);
+                      // نبحث عن id الـ "غطاء" في أنواع المنتجات ليتم تحديده افتراضياً
+                      const lidType = types.find(t => t.name === "غطاء");
+                      setShowForm({
+                        isManualLidConversion: true,
+                        manualLidId: ml.id,
+                        prefill: {
+                          name: ml.name,
+                          type_id: lidType ? lidType.id : ""
+                        }
+                      });
+                    }}
+                    className="bg-brand-blue text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-brand-blueDark transition-colors flex items-center gap-1.5"
+                  >
+                    <Plus size={14} />
+                    إنشاء كمنتج
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* الإعدادات */}
         <AnimatePresence>
           {showSettings && (
@@ -2604,6 +2665,7 @@ export default function Admin() {
             materialGroups={materialGroups}
             groups={groups}
             allProducts={products}
+              prefillData={typeof showForm === 'object' ? showForm : null}
             onClose={() => setShowForm(false)}
             onSaved={(msg, type) => {
               notify(msg, type);
