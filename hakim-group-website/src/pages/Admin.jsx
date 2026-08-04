@@ -2647,9 +2647,14 @@ export default function Admin() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => {
-                              setViewProduct(p);
-                              setViewProductImageIndex(0);
+                            onClick={async () => {
+                              try {
+                                const fullProduct = await apiFetch(`/products/${p.id}`);
+                                setViewProduct(fullProduct);
+                                setViewProductImageIndex(0);
+                              } catch (e) {
+                                notify("خطأ في جلب بيانات المنتج", "error");
+                              }
                             }}
                             className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
                             title="عرض التفاصيل"
