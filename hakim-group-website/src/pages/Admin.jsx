@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { grantTVAccess } from "../components/TVGate";
+import TVShowcase from "./pages/TVShowcase";
+import TVGate, { grantTVAccess } from "../components/TVGate";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductDetail from "./ProductDetail";
 import AnalyticsModal from "../components/AnalyticsModal";
@@ -39,9 +40,9 @@ import {
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const ADMIN_AUTH_KEY = "hakim_admin_token";
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Reusable helpers
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 const apiFetch = (path, opts = {}) => {
   const cleanPath = path.startsWith("/products")
     ? path
@@ -61,14 +62,14 @@ const apiFetch = (path, opts = {}) => {
 };
 
 const TEMPS = [
-  { value: "hot", label: "ðŸ”¥ Ø³Ø§Ø®Ù†" },
-  { value: "cold", label: "â„ï¸ Ø¨Ø§Ø±Ø¯" },
-  { value: "both", label: "âœ… Ø§Ù„Ø§ØªÙ†ÙŠÙ†" },
+  { value: "hot", label: "🔥 ساخن" },
+  { value: "cold", label: "❄️ بارد" },
+  { value: "both", label: "✅ الاتنين" },
 ];
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// ðŸ†• ØµÙ ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ù†ØªØ¬ â€” Ø¨Ù†Ø¸Ø§Ù… Ø§Ù„ØªØ±Ù‚ÙŠÙ… Ø§Ù„Ù…Ø¨Ø§Ø´Ø± + Checkbox Ù„Ù„ØªØ­Ø¯ÙŠØ¯
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
+// 🆕 صف ترتيب المنتج — بنظام الترقيم المباشر + Checkbox للتحديد
+// ─────────────────────────────────────────────────────────────
 function OrderProductRow({
   p,
   index,
@@ -80,7 +81,7 @@ function OrderProductRow({
 }) {
   const thumb = p.images?.[0]?.url || p.images?.[0];
   const tempLabel =
-    p.temp === "hot" ? "Ø³Ø§Ø®Ù†" : p.temp === "cold" ? "Ø¨Ø§Ø±Ø¯" : "Ø³Ø§Ø®Ù† ÙˆØ¨Ø§Ø±Ø¯";
+    p.temp === "hot" ? "ساخن" : p.temp === "cold" ? "بارد" : "ساخن وبارد";
   const tempColor =
     p.temp === "hot"
       ? "text-orange-500"
@@ -96,7 +97,7 @@ function OrderProductRow({
           : "bg-white border-gray-100 hover:border-brand-blue/20"
       }`}
     >
-      {/* ðŸ†• Checkbox Ù„Ù„ØªØ­Ø¯ÙŠØ¯ */}
+      {/* 🆕 Checkbox للتحديد */}
       <button
         onClick={() => onToggleSelect(p.id)}
         className="shrink-0 text-gray-400 hover:text-brand-blue transition-colors"
@@ -108,7 +109,7 @@ function OrderProductRow({
         )}
       </button>
 
-      {/* Ø­Ù‚Ù„ Ø±Ù‚Ù… Ø§Ù„ØªØ±ØªÙŠØ¨ */}
+      {/* حقل رقم الترتيب */}
       <div className="flex items-center gap-1 shrink-0">
         <Hash size={13} className="text-gray-300" />
         <input
@@ -137,19 +138,19 @@ function OrderProductRow({
               e.target.src =
                 "data:image/svg+xml;utf8," +
                 encodeURIComponent(
-                  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">Ù„Ø§ ØµÙˆØ±Ø©</text></svg>',
+                  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>',
                 );
             }}
           />
         ) : (
-          <span className="text-[9px] text-gray-300">Ù„Ø§ ØµÙˆØ±Ø©</span>
+          <span className="text-[9px] text-gray-300">لا صورة</span>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold text-gray-800 truncate">{p.name}</p>
         <p className="text-xs text-gray-400 truncate flex items-center gap-1.5">
-          {[p.code, p.size].filter(Boolean).join(" Â· ")}
-          <span className={`font-bold ${tempColor}`}>Â· {tempLabel}</span>
+          {[p.code, p.size].filter(Boolean).join(" · ")}
+          <span className={`font-bold ${tempColor}`}>· {tempLabel}</span>
         </p>
       </div>
     </div>
@@ -163,7 +164,7 @@ function GroupedOrderCards({
   search,
   selectedIds,
   onToggleSelect,
-  onToggleSelectAllInGroup, // ðŸ†• Ø¯Ø§Ù„Ø© ØªØ­Ø¯ÙŠØ¯ ÙƒÙ„ Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©
+  onToggleSelectAllInGroup, // 🆕 دالة تحديد كل منتجات المجموعة
 }) {
   const q = search.trim().toLowerCase();
   const matches = (p) =>
@@ -177,7 +178,7 @@ function GroupedOrderCards({
         const visibleProducts = block.products.filter(matches);
         if (q && visibleProducts.length === 0) return null;
 
-        // ðŸ†• Ù‡Ù„ ÙƒÙ„ Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ù…Ø­Ø¯Ø¯Ø©ØŸ
+        // 🆕 هل كل منتجات المجموعة محددة؟
         const allSelected =
           visibleProducts.length > 0 &&
           visibleProducts.every((p) => selectedIds.includes(p.id));
@@ -188,14 +189,14 @@ function GroupedOrderCards({
             className="bg-white rounded-2xl border border-gray-100 p-4"
           >
             <div className="flex items-center gap-2 mb-3 bg-brand-blueLight/50 border border-brand-blue/10 rounded-xl px-3 py-2">
-              {/* ðŸ†• Ø²Ø± ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ø¨Ø§Ù„ÙƒØ§Ù…Ù„ */}
+              {/* 🆕 زر تحديد المجموعة بالكامل */}
               <button
                 onClick={() => onToggleSelectAllInGroup(block.gid)}
                 className="shrink-0 text-gray-400 hover:text-brand-blue transition-colors"
                 title={
                   allSelected
-                    ? "Ø¥Ù„ØºØ§Ø¡ ØªØ­Ø¯ÙŠØ¯ ÙƒÙ„ Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©"
-                    : "ØªØ­Ø¯ÙŠØ¯ ÙƒÙ„ Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©"
+                    ? "إلغاء تحديد كل منتجات المجموعة"
+                    : "تحديد كل منتجات المجموعة"
                 }
               >
                 {allSelected ? (
@@ -205,7 +206,7 @@ function GroupedOrderCards({
                 )}
               </button>
 
-              {/* Ø±Ù‚Ù… Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© */}
+              {/* رقم المجموعة */}
               <div className="flex items-center gap-1 shrink-0">
                 <Hash size={13} className="text-brand-blue/50" />
                 <input
@@ -232,7 +233,7 @@ function GroupedOrderCards({
                 {block.label}
               </span>
               <span className="text-xs text-brand-blue/50 font-semibold shrink-0">
-                {visibleProducts.length}/{block.products.length} Ù…Ù†ØªØ¬
+                {visibleProducts.length}/{block.products.length} منتج
               </span>
             </div>
 
@@ -260,9 +261,9 @@ function GroupedOrderCards({
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Toast
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function Toast({ msg, type, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
@@ -288,16 +289,16 @@ function Toast({ msg, type, onClose }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Inline editable list
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function MiniManager({
   title,
   items,
   onAdd,
   onDelete,
   onEdit,
-  placeholder = "Ø§Ø³Ù… Ø¬Ø¯ÙŠØ¯...",
+  placeholder = "اسم جديد...",
 }) {
   const [input, setInput] = useState("");
   const [editing, setEditing] = useState(null);
@@ -341,7 +342,7 @@ function MiniManager({
                   onClick={handleEdit}
                   className="text-brand-green text-xs font-bold px-2 py-1 bg-green-50 rounded-lg hover:bg-green-100"
                 >
-                  Ø­ÙØ¸
+                  حفظ
                 </button>
                 <button
                   onClick={() => setEditing(null)}
@@ -373,7 +374,7 @@ function MiniManager({
         ))}
         {items.length === 0 && (
           <p className="text-xs text-gray-400 text-center py-2">
-            Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¹Ù†Ø§ØµØ±
+            لا يوجد عناصر
           </p>
         )}
       </div>
@@ -399,9 +400,9 @@ function MiniManager({
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Materials Manager
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function MaterialsManager({ grouped, onRefresh, toast }) {
   const [expanded, setExpanded] = useState({});
   const [newSub, setNewSub] = useState({});
@@ -415,13 +416,13 @@ function MaterialsManager({ grouped, onRefresh, toast }) {
       body: JSON.stringify({ name }),
     });
     if (res.ok) {
-      toast("ØªÙ…Øª Ø§Ù„Ø¥Ø¶Ø§ÙØ© âœ“");
+      toast("تمت الإضافة ✓");
       onRefresh();
-    } else toast("Ø­Ø¯Ø« Ø®Ø·Ø£", "error");
+    } else toast("حدث خطأ", "error");
   };
 
   const delCategory = async (id) => {
-    if (!confirm("Ù‡ÙŠØªØ­Ø°Ù ÙˆÙƒÙ„ Ø®Ø§Ù…Ø§ØªÙ‡ Ø§Ù„ÙØ±Ø¹ÙŠØ©!")) return;
+    if (!confirm("هيتحذف وكل خاماته الفرعية!")) return;
     await apiFetch(`/material-categories/${id}`, { method: "DELETE" });
     onRefresh();
   };
@@ -444,10 +445,10 @@ function MaterialsManager({ grouped, onRefresh, toast }) {
       body: JSON.stringify({ name, category_id: catId }),
     });
     if (res.ok) {
-      toast("ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø®Ø§Ù…Ø© âœ“");
+      toast("تمت إضافة الخامة ✓");
       setNewSub((p) => ({ ...p, [catId]: "" }));
       onRefresh();
-    } else toast("Ù…ÙˆØ¬ÙˆØ¯Ø© Ø¨Ø§Ù„ÙØ¹Ù„", "error");
+    } else toast("موجودة بالفعل", "error");
   };
 
   const delSub = async (id) => {
@@ -467,12 +468,12 @@ function MaterialsManager({ grouped, onRefresh, toast }) {
   return (
     <div className="space-y-3">
       <MiniManager
-        title="Ø§Ù„ÙØ¦Ø§Øª Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© (Ø¨Ù„Ø§Ø³ØªÙŠÙƒØŒ ÙƒØ±ØªÙˆÙ†...)"
+        title="الفئات الرئيسية (بلاستيك، كرتون...)"
         items={grouped.map((g) => ({ id: g.id, name: g.name }))}
         onAdd={addCategory}
         onDelete={delCategory}
         onEdit={editCategory}
-        placeholder="ÙØ¦Ø© Ø¬Ø¯ÙŠØ¯Ø©..."
+        placeholder="فئة جديدة..."
       />
 
       {grouped.map((cat) => (
@@ -486,7 +487,7 @@ function MaterialsManager({ grouped, onRefresh, toast }) {
                        hover:bg-gray-50 transition-colors"
           >
             <span className="text-sm font-bold text-gray-700">
-              Ø®Ø§Ù…Ø§Øª <span className="text-brand-blue">{cat.name}</span>
+              خامات <span className="text-brand-blue">{cat.name}</span>
               <span className="mr-2 text-xs text-gray-400">
                 ({cat.materials?.length || 0})
               </span>
@@ -523,7 +524,7 @@ function MaterialsManager({ grouped, onRefresh, toast }) {
                         setNewSub((p) => ({ ...p, [cat.id]: e.target.value }))
                       }
                       onKeyDown={(e) => e.key === "Enter" && addSub(cat.id)}
-                      placeholder="Ù…Ø«Ø§Ù„: PPØŒ PETØŒ HDPE"
+                      placeholder="مثال: PP، PET، HDPE"
                       className="flex-1 text-sm border border-gray-200 rounded-xl px-3 py-2
                                  focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                     />
@@ -568,7 +569,7 @@ function SubItem({ item, onDelete, onEdit }) {
             onClick={save}
             className="text-xs font-bold text-green-600 px-2 py-1 bg-green-50 rounded-lg"
           >
-            Ø­ÙØ¸
+            حفظ
           </button>
           <button onClick={() => setEditing(false)}>
             <X size={13} className="text-gray-400" />
@@ -597,9 +598,9 @@ function SubItem({ item, onDelete, onEdit }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Lid Selector with manual lid support
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function LidSelector({ selectedLids, onChange }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -646,7 +647,7 @@ function LidSelector({ selectedLids, onChange }) {
   const addManualLid = () => {
     if (!query.trim()) return;
     if (selectedLids.some((l) => l.name === query.trim())) {
-      alert("Ù‡Ø°Ø§ Ø§Ù„ØºØ·Ø§Ø¡ Ù…Ø¶Ø§Ù Ø¨Ø§Ù„ÙØ¹Ù„");
+      alert("هذا الغطاء مضاف بالفعل");
       return;
     }
     const newLid = {
@@ -692,12 +693,12 @@ function LidSelector({ selectedLids, onChange }) {
         </div>
         <div>
           <p className="text-sm font-bold text-gray-700">
-            Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£ØºØ·ÙŠØ© Ù…Ù†Ø§Ø³Ø¨Ø©
+            لا توجد أغطية مناسبة
           </p>
           <p className="text-xs text-gray-400">
             {noLids
-              ? "Ù…Ø­Ø¯Ø¯ â€” Ù„Ù† ÙŠØ¸Ù‡Ø± Ù‚Ø³Ù… Ø§Ù„Ø£ØºØ·ÙŠØ©"
-              : "ØºÙŠØ± Ù…Ø­Ø¯Ø¯ â€” ÙŠÙ…ÙƒÙ†Ùƒ Ø¥Ø¶Ø§ÙØ© Ø£ØºØ·ÙŠØ©"}
+              ? "محدد — لن يظهر قسم الأغطية"
+              : "غير محدد — يمكنك إضافة أغطية"}
           </p>
         </div>
       </label>
@@ -729,11 +730,11 @@ function LidSelector({ selectedLids, onChange }) {
                       </span>
                     )}
                     {(lid.isManual || lid.manual) && (
-                      <span className="text-purple-500 text-[9px]">Â· ÙŠØ¯ÙˆÙŠ</span>
+                      <span className="text-purple-500 text-[9px]">· يدوي</span>
                     )}
                     {!lid.isManual && !lid.manual && lid.material_name && (
                       <span className="text-gray-400 text-[9px]">
-                        Â· {lid.material_name}
+                        · {lid.material_name}
                       </span>
                     )}
                     <button
@@ -766,7 +767,7 @@ function LidSelector({ selectedLids, onChange }) {
                     }
                   }
                 }}
-                placeholder="Ø§Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„ÙƒÙˆØ¯ØŒ Ø£Ùˆ Ø§ÙƒØªØ¨ Ø§Ø³Ù…Ø§Ù‹ Ø¬Ø¯ÙŠØ¯Ø§Ù‹ ÙˆØ§Ø¶ØºØ· Enter"
+                placeholder="ابحث بالاسم أو الكود، أو اكتب اسماً جديداً واضغط Enter"
                 className="w-full pr-9 pl-4 py-2.5 text-sm border border-gray-200 rounded-xl
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30 bg-white"
               />
@@ -813,7 +814,7 @@ function LidSelector({ selectedLids, onChange }) {
                             className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center
                               ${isManual ? "bg-purple-100 text-purple-600" : "bg-gray-100"}`}
                           >
-                            {isManual ? "ðŸ“" : ""}
+                            {isManual ? "📝" : ""}
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
@@ -823,7 +824,7 @@ function LidSelector({ selectedLids, onChange }) {
                           <p className="text-[11px] text-gray-400">
                             {isManual ? (
                               <span className="text-purple-500">
-                                ØºØ·Ø§Ø¡ ÙŠØ¯ÙˆÙŠ (ØºÙŠØ± Ù…Ø³Ø¬Ù„ ÙƒÙ…Ù†ØªØ¬)
+                                غطاء يدوي (غير مسجل كمنتج)
                               </span>
                             ) : (
                               <>
@@ -832,15 +833,15 @@ function LidSelector({ selectedLids, onChange }) {
                                     {r.code}
                                   </span>
                                 )}
-                                {r.code && r.size && " Â· "}
-                                {r.size} Â· {r.material_name}
+                                {r.code && r.size && " · "}
+                                {r.size} · {r.material_name}
                               </>
                             )}
                           </p>
                         </div>
                         {already ? (
                           <span className="text-xs font-bold text-green-600">
-                            âœ“ Ù…Ø¶Ø§Ù
+                            ✓ مضاف
                           </span>
                         ) : (
                           <Plus
@@ -863,10 +864,10 @@ function LidSelector({ selectedLids, onChange }) {
               >
                 <div>
                   <p className="text-sm font-semibold text-gray-700">
-                    Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØºØ·Ø§Ø¡ Ø¨Ø§Ø³Ù… "{query.trim()}"
+                    لا يوجد غطاء باسم "{query.trim()}"
                   </p>
                   <p className="text-xs text-purple-600">
-                    Ø³ÙŠØªÙ… ØªØ®Ø²ÙŠÙ†Ù‡ ÙƒØ§Ø³Ù… ÙÙ‚Ø· ÙÙŠ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
+                    سيتم تخزينه كاسم فقط في قاعدة البيانات
                   </p>
                 </div>
                 <button
@@ -874,7 +875,7 @@ function LidSelector({ selectedLids, onChange }) {
                   className="px-4 py-2 bg-purple-600 text-white text-sm font-bold rounded-xl hover:opacity-90 transition flex items-center gap-2"
                 >
                   <Plus size={14} />
-                  Ø£Ø¶Ù Ø§Ù„Ø§Ø³Ù…
+                  أضف الاسم
                 </button>
               </motion.div>
             )}
@@ -885,9 +886,9 @@ function LidSelector({ selectedLids, onChange }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Image Uploader
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function ImageUploader({
   newFiles,
   onNewFiles,
@@ -916,7 +917,7 @@ function ImageUploader({
                   e.target.src =
                     "data:image/svg+xml;utf8," +
                     encodeURIComponent(
-                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">Ù„Ø§ ØµÙˆØ±Ø©</text></svg>',
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>',
                     );
                 }}
               />
@@ -948,11 +949,11 @@ function ImageUploader({
           className="mx-auto mb-2 text-gray-300 group-hover:text-brand-blue transition-colors"
         />
         <p className="text-sm text-gray-500">
-          Ø§Ø³Ø­Ø¨ Ø§Ù„ØµÙˆØ± Ù‡Ù†Ø§ Ø£Ùˆ{" "}
-          <span className="text-brand-blue font-bold">Ø§Ø®ØªØ± Ù…Ù† Ø¬Ù‡Ø§Ø²Ùƒ</span>
+          اسحب الصور هنا أو{" "}
+          <span className="text-brand-blue font-bold">اختر من جهازك</span>
         </p>
         <p className="text-xs text-gray-400 mt-1">
-          JPG Â· PNG Â· WEBP Â· Ø­Ø¬Ù… Ø£Ù‚ØµÙ‰ 5MB
+          JPG · PNG · WEBP · حجم أقصى 5MB
         </p>
         <input
           ref={ref}
@@ -991,9 +992,9 @@ function ImageUploader({
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Autocomplete for product name
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function NameAutocomplete({ value, onChange }) {
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
@@ -1026,7 +1027,7 @@ function NameAutocomplete({ value, onChange }) {
         value={value}
         onChange={handleChange}
         onBlur={() => setTimeout(() => setOpen(false), 180)}
-        placeholder="Ø§Ø³Ù… Ø§Ù„Ù…Ù†ØªØ¬..."
+        placeholder="اسم المنتج..."
         className="admin-input"
         autoComplete="off"
         required
@@ -1041,7 +1042,7 @@ function NameAutocomplete({ value, onChange }) {
                        rounded-2xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto"
           >
             <li className="px-4 py-2 text-[10px] font-extrabold text-orange-600 bg-orange-50 border-b border-orange-100 uppercase tracking-wider">
-              âš  Ù…Ù†ØªØ¬Ø§Øª Ù…Ø´Ø§Ø¨Ù‡Ø© Ù…ÙˆØ¬ÙˆØ¯Ø©
+              ⚠ منتجات مشابهة موجودة
             </li>
             {suggestions.map((s) => (
               <li
@@ -1063,8 +1064,8 @@ function NameAutocomplete({ value, onChange }) {
                 <div>
                   <p className="text-sm font-bold text-gray-800">{s.name}</p>
                   <p className="text-[11px] text-gray-400">
-                    {s.code && <span className="font-mono">{s.code} Â· </span>}
-                    {s.material_name} Â· {s.size}
+                    {s.code && <span className="font-mono">{s.code} · </span>}
+                    {s.material_name} · {s.size}
                   </p>
                 </div>
               </li>
@@ -1076,9 +1077,9 @@ function NameAutocomplete({ value, onChange }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Product Form Modal
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 const EMPTY = {
   name: "",
   code: "",
@@ -1162,7 +1163,7 @@ function ProductFormModal({
 
         if (!groupResponse.ok) {
           const errorData = await groupResponse.json();
-          throw new Error(errorData.error || "ÙØ´Ù„ Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©");
+          throw new Error(errorData.error || "فشل إنشاء المجموعة");
         }
 
         const newGroup = await groupResponse.json();
@@ -1199,10 +1200,10 @@ function ProductFormModal({
 
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.error || "Ø­Ø¯Ø« Ø®Ø·Ø£");
+        throw new Error(errorData.error || "حدث خطأ");
       }
 
-      onSaved(editProduct ? "ØªÙ… Ø§Ù„ØªØ­Ø¯ÙŠØ« âœ“" : "ØªÙ…Øª Ø§Ù„Ø¥Ø¶Ø§ÙØ© âœ“");
+      onSaved(editProduct ? "تم التحديث ✓" : "تمت الإضافة ✓");
       onClose();
 
       if (
@@ -1236,7 +1237,7 @@ function ProductFormModal({
       >
         <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
           <h2 className="text-xl font-black text-gray-800">
-            {editProduct ? "âœï¸ ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ù†ØªØ¬" : "âž• Ø¥Ø¶Ø§ÙØ© Ù…Ù†ØªØ¬ Ø¬Ø¯ÙŠØ¯"}
+            {editProduct ? "✏️ تعديل المنتج" : "➕ إضافة منتج جديد"}
           </h2>
           <button
             onClick={onClose}
@@ -1248,7 +1249,7 @@ function ProductFormModal({
 
         <form onSubmit={handleSubmit} className="p-7 space-y-5">
           <div>
-            <label className="admin-label">Ø§Ø³Ù… Ø§Ù„Ù…Ù†ØªØ¬ *</label>
+            <label className="admin-label">اسم المنتج *</label>
             <NameAutocomplete
               value={form.name}
               onChange={(v) => setForm((f) => ({ ...f, name: v }))}
@@ -1257,7 +1258,7 @@ function ProductFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="admin-label">Ø§Ù„ÙƒÙˆØ¯</label>
+              <label className="admin-label">الكود</label>
               <input
                 value={form.code}
                 onChange={set("code")}
@@ -1266,25 +1267,25 @@ function ProductFormModal({
               />
             </div>
             <div>
-              <label className="admin-label">Ø§Ù„Ù…Ù‚Ø§Ø³</label>
+              <label className="admin-label">المقاس</label>
               <input
                 value={form.size}
                 onChange={set("size")}
-                placeholder="8 Ø£ÙˆÙ†ØµØ© / 500 Ù…Ù„"
+                placeholder="8 أونصة / 500 مل"
                 className="admin-input"
               />
             </div>
           </div>
 
           <div>
-            <label className="admin-label">Ø§Ù„Ù†ÙˆØ¹ *</label>
+            <label className="admin-label">النوع *</label>
             <select
               value={form.type_id}
               onChange={set("type_id")}
               className="admin-input"
               required
             >
-              <option value="">â€” Ø§Ø®ØªØ± Ø§Ù„Ù†ÙˆØ¹ â€”</option>
+              <option value="">— اختر النوع —</option>
               {types.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -1295,7 +1296,7 @@ function ProductFormModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="admin-label">ÙØ¦Ø© Ø§Ù„Ø®Ø§Ù…Ø©</label>
+              <label className="admin-label">فئة الخامة</label>
               <select
                 value={selectedCatId}
                 onChange={(e) => {
@@ -1304,7 +1305,7 @@ function ProductFormModal({
                 }}
                 className="admin-input"
               >
-                <option value="">â€” Ø§Ø®ØªØ± Ø§Ù„ÙØ¦Ø© â€”</option>
+                <option value="">— اختر الفئة —</option>
                 {materialGroups.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -1313,14 +1314,14 @@ function ProductFormModal({
               </select>
             </div>
             <div>
-              <label className="admin-label">Ø§Ù„Ø®Ø§Ù…Ø© Ø§Ù„ØªÙØµÙŠÙ„ÙŠØ©</label>
+              <label className="admin-label">الخامة التفصيلية</label>
               <select
                 value={form.material_id}
                 onChange={set("material_id")}
                 className="admin-input"
                 disabled={!selectedCatId}
               >
-                <option value="">â€” Ø§Ø®ØªØ± Ø§Ù„Ø®Ø§Ù…Ø© â€”</option>
+                <option value="">— اختر الخامة —</option>
                 {subMaterials.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
@@ -1331,7 +1332,7 @@ function ProductFormModal({
           </div>
 
           <div>
-            <label className="admin-label">Ù…Ù„Ø§Ø¦Ù…Ø© Ø§Ù„Ø­Ø±Ø§Ø±Ø© *</label>
+            <label className="admin-label">ملائمة الحرارة *</label>
             <div className="flex gap-3">
               {TEMPS.map((t) => (
                 <label
@@ -1359,7 +1360,7 @@ function ProductFormModal({
           </div>
 
           <div>
-            <label className="admin-label">Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© (Ù„Ù„Ù…Ù‚Ø§Ø³Ø§Øª Ø§Ù„Ù…ØªØ±Ø§Ø¨Ø·Ø©)</label>
+            <label className="admin-label">المجموعة (للمقاسات المترابطة)</label>
             <select
               value={showNewGroup ? "__new__" : form.group_id}
               onChange={(e) => {
@@ -1373,26 +1374,26 @@ function ProductFormModal({
               }}
               className="admin-input"
             >
-              <option value="">â€” Ø¨Ø¯ÙˆÙ† Ù…Ø¬Ù…ÙˆØ¹Ø© â€”</option>
+              <option value="">— بدون مجموعة —</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
                 </option>
               ))}
-              <option value="__new__">âž• Ø¥Ù†Ø´Ø§Ø¡ Ù…Ø¬Ù…ÙˆØ¹Ø© Ø¬Ø¯ÙŠØ¯Ø©...</option>
+              <option value="__new__">➕ إنشاء مجموعة جديدة...</option>
             </select>
             {showNewGroup && (
               <input
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder='Ø§Ø³Ù… Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© â€” Ù…Ø«Ø§Ù„: "KFC Cup"'
+                placeholder='اسم المجموعة — مثال: "KFC Cup"'
                 className="admin-input mt-2"
               />
             )}
           </div>
 
           <div>
-            <label className="admin-label">Ø§Ù„Ø£ØºØ·ÙŠØ© Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø©</label>
+            <label className="admin-label">الأغطية المناسبة</label>
             <LidSelector
               selectedLids={selectedLids}
               onChange={setSelectedLids}
@@ -1400,18 +1401,18 @@ function ProductFormModal({
           </div>
 
           <div>
-            <label className="admin-label">Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label>
+            <label className="admin-label">ملاحظات</label>
             <textarea
               value={form.notes}
               onChange={set("notes")}
               rows={2}
-              placeholder="Ø£ÙŠ ØªÙØ§ØµÙŠÙ„ Ø¥Ø¶Ø§ÙÙŠØ©..."
+              placeholder="أي تفاصيل إضافية..."
               className="admin-input resize-none"
             />
           </div>
 
           <div>
-            <label className="admin-label">ØµÙˆØ± Ø§Ù„Ù…Ù†ØªØ¬</label>
+            <label className="admin-label">صور المنتج</label>
             <ImageUploader
               newFiles={newFiles}
               onNewFiles={setNewFiles}
@@ -1432,14 +1433,14 @@ function ProductFormModal({
                          disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving && <Loader2 size={16} className="animate-spin" />}
-              {editProduct ? "Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª" : "Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ù†ØªØ¬"}
+              {editProduct ? "حفظ التعديلات" : "إضافة المنتج"}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-6 py-3.5 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
             >
-              Ø¥Ù„ØºØ§Ø¡
+              إلغاء
             </button>
           </div>
         </form>
@@ -1448,9 +1449,9 @@ function ProductFormModal({
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Settings Panel
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
   const [tab, setTab] = useState("types");
 
@@ -1461,7 +1462,7 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
-      toast("ØªÙ…Øª Ø§Ù„Ø¥Ø¶Ø§ÙØ© âœ“");
+      toast("تمت الإضافة ✓");
       onRefresh();
     },
     del: async (id) => {
@@ -1482,9 +1483,9 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
   const groupsCrud = crud("groups");
 
   const TABS = [
-    { key: "types", label: "Ø§Ù„Ø£Ù†ÙˆØ§Ø¹" },
-    { key: "materials", label: "Ø§Ù„Ø®Ø§Ù…Ø§Øª" },
-    { key: "groups", label: "Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª" },
+    { key: "types", label: "الأنواع" },
+    { key: "materials", label: "الخامات" },
+    { key: "groups", label: "المجموعات" },
   ];
 
   return (
@@ -1509,12 +1510,12 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
       <div className="p-4">
         {tab === "types" && (
           <MiniManager
-            title="Ø£Ù†ÙˆØ§Ø¹ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª"
+            title="أنواع المنتجات"
             items={types}
             onAdd={typesCrud.add}
             onDelete={typesCrud.del}
             onEdit={typesCrud.edit}
-            placeholder="Ù…Ø«Ø§Ù„: ÙƒÙˆØ¨ØŒ Ø·Ø¨Ù‚ØŒ Ø¹Ù„Ø¨Ø©..."
+            placeholder="مثال: كوب، طبق، علبة..."
           />
         )}
         {tab === "materials" && (
@@ -1526,12 +1527,12 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
         )}
         {tab === "groups" && (
           <MiniManager
-            title="Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª"
+            title="المجموعات"
             items={groups}
             onAdd={groupsCrud.add}
             onDelete={groupsCrud.del}
             onEdit={groupsCrud.edit}
-            placeholder='Ù…Ø«Ø§Ù„: "KFC Cup" Ø£Ùˆ "Lunch Box"'
+            placeholder='مثال: "KFC Cup" أو "Lunch Box"'
           />
         )}
       </div>
@@ -1539,9 +1540,9 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 // Admin Login
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
 function AdminLogin({ onSuccess }) {
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
@@ -1584,9 +1585,9 @@ function AdminLogin({ onSuccess }) {
           <Lock size={22} className="text-brand-blue" />
         </div>
         <h1 className="text-gray-800 font-black text-xl mb-1">
-          Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø­ÙƒÙŠÙ… Ø¬Ø±ÙˆØ¨
+          لوحة تحكم حكيم جروب
         </h1>
-        <p className="text-gray-400 text-sm mb-6">Ø§Ø¯Ø®Ù„ ÙƒÙˆØ¯ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ù„Ù…ØªØ§Ø¨Ø¹Ø©</p>
+        <p className="text-gray-400 text-sm mb-6">ادخل كود الدخول للمتابعة</p>
         <input
           type="password"
           value={input}
@@ -1594,7 +1595,7 @@ function AdminLogin({ onSuccess }) {
             setInput(e.target.value);
             setError(false);
           }}
-          placeholder="ÙƒÙˆØ¯ Ø§Ù„Ø¯Ø®ÙˆÙ„"
+          placeholder="كود الدخول"
           dir="ltr"
           className={`w-full text-center border rounded-2xl py-3 px-4 outline-none mb-3 transition-colors
             ${error ? "border-red-400 focus:border-red-400" : "border-gray-200 focus:border-brand-blue"}`}
@@ -1602,7 +1603,7 @@ function AdminLogin({ onSuccess }) {
         />
         {error && (
           <p className="text-red-500 text-xs mb-3 font-bold">
-            Ø§Ù„ÙƒÙˆØ¯ ØºÙ„Ø·ØŒ Ø­Ø§ÙˆÙ„ ØªØ§Ù†ÙŠ.
+            الكود غلط، حاول تاني.
           </p>
         )}
         <button
@@ -1610,16 +1611,16 @@ function AdminLogin({ onSuccess }) {
           disabled={loading}
           className="w-full py-3 rounded-2xl bg-brand-blue text-white font-bold hover:opacity-90 transition disabled:opacity-50"
         >
-          {loading ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø¯Ø®ÙˆÙ„..." : "Ø¯Ø®ÙˆÙ„"}
+          {loading ? "جاري الدخول..." : "دخول"}
         </button>
       </form>
     </div>
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// ðŸ†• Bulk Edit Modal - ØªØºÙŠÙŠØ± Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ù„Ù…Ù†ØªØ¬Ø§Øª Ù…ØªØ¹Ø¯Ø¯Ø©
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
+// 🆕 Bulk Edit Modal - تغيير المجموعة لمنتجات متعددة
+// ─────────────────────────────────────────────────────────────
 function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1645,7 +1646,7 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
         });
 
         if (!groupResponse.ok) {
-          throw new Error("ÙØ´Ù„ Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©");
+          throw new Error("فشل إنشاء المجموعة");
         }
 
         const newGroup = await groupResponse.json();
@@ -1658,14 +1659,14 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
     }
 
     if (!finalGroupId) {
-      onSaved("Ø§Ø®ØªØ± Ù…Ø¬Ù…ÙˆØ¹Ø© Ø£ÙˆÙ„Ø§Ù‹", "error");
+      onSaved("اختر مجموعة أولاً", "error");
       return;
     }
 
     setSaving(true);
     try {
-      // ØªØ­Ø¯ÙŠØ« ÙƒÙ„ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø­Ø¯Ø¯Ø© â€” Ø¹Ù† Ø·Ø±ÙŠÙ‚ endpoint Ù…Ø®ØµØµ Ù„ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ø¨Ø³
-      // (Ø¢Ù…Ù† ÙˆÙ…Ø´ Ù‡ÙŠÙ…Ø³Ø­ Ø¨Ø§Ù‚ÙŠ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ù†ØªØ¬ Ø²ÙŠ Ø§Ù„Ø§Ø³Ù… ÙˆØ§Ù„Ø­Ø±Ø§Ø±Ø©)
+      // تحديث كل المنتجات المحددة — عن طريق endpoint مخصص لتحديث المجموعة بس
+      // (آمن ومش هيمسح باقي بيانات المنتج زي الاسم والحرارة)
       const updates = selectedIds.map((id) =>
         apiFetch(`/${id}/group`, {
           method: "PUT",
@@ -1678,10 +1679,10 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
       const failed = results.filter((r) => !r.ok);
 
       if (failed.length > 0) {
-        throw new Error(`ÙØ´Ù„ ØªØ­Ø¯ÙŠØ« ${failed.length} Ù…Ù†ØªØ¬`);
+        throw new Error(`فشل تحديث ${failed.length} منتج`);
       }
 
-      onSaved(`âœ… ØªÙ… ØªØ­Ø¯ÙŠØ« ${selectedIds.length} Ù…Ù†ØªØ¬ Ø¨Ù†Ø¬Ø§Ø­`);
+      onSaved(`✅ تم تحديث ${selectedIds.length} منتج بنجاح`);
       onClose();
 
       if (
@@ -1716,7 +1717,7 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
             <Copy size={18} className="text-brand-blue" />
-            ØªØ¹Ø¯ÙŠÙ„ Ù…Ø¬Ù…ÙˆØ¹Ø© {selectedIds.length} Ù…Ù†ØªØ¬
+            تعديل مجموعة {selectedIds.length} منتج
           </h2>
           <button
             onClick={onClose}
@@ -1729,7 +1730,7 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <p className="text-sm text-gray-500 mb-3">
-              Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø­Ø¯Ø¯Ø©:{" "}
+              المنتجات المحددة:{" "}
               <span className="font-bold text-gray-800">
                 {selectedIds.length}
               </span>
@@ -1737,12 +1738,12 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
             <div className="max-h-32 overflow-y-auto bg-gray-50 rounded-xl p-3 space-y-1 mb-4">
               {selectedProducts.slice(0, 5).map((p) => (
                 <div key={p.id} className="text-sm text-gray-600 truncate">
-                  â€¢ {p.name}
+                  • {p.name}
                 </div>
               ))}
               {selectedProducts.length > 5 && (
                 <div className="text-xs text-gray-400">
-                  + {selectedProducts.length - 5} Ù…Ù†ØªØ¬Ø§Øª Ø£Ø®Ø±Ù‰
+                  + {selectedProducts.length - 5} منتجات أخرى
                 </div>
               )}
             </div>
@@ -1750,7 +1751,7 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
 
           <div>
             <label className="text-sm font-bold text-gray-700 block mb-2">
-              Ø§Ø®ØªØ± Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
+              اختر المجموعة الجديدة
             </label>
             <select
               value={showNewGroup ? "__new__" : selectedGroupId}
@@ -1767,25 +1768,25 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
                          focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               required
             >
-              <option value="">â€” Ø§Ø®ØªØ± Ù…Ø¬Ù…ÙˆØ¹Ø© â€”</option>
+              <option value="">— اختر مجموعة —</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}
                 </option>
               ))}
-              <option value="__new__">âž• Ø¥Ù†Ø´Ø§Ø¡ Ù…Ø¬Ù…ÙˆØ¹Ø© Ø¬Ø¯ÙŠØ¯Ø©...</option>
+              <option value="__new__">➕ إنشاء مجموعة جديدة...</option>
             </select>
           </div>
 
           {showNewGroup && (
             <div>
               <label className="text-sm font-bold text-gray-700 block mb-2">
-                Ø§Ø³Ù… Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©
+                اسم المجموعة الجديدة
               </label>
               <input
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder='Ù…Ø«Ø§Ù„: "Premium Cups"'
+                placeholder='مثال: "Premium Cups"'
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
                 required
@@ -1805,14 +1806,14 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
                          disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving && <Loader2 size={16} className="animate-spin" />}
-              {saving ? "Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ø¯ÙŠØ«..." : "ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø©"}
+              {saving ? "جاري التحديث..." : "تحديث المجموعة"}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="px-6 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
             >
-              Ø¥Ù„ØºØ§Ø¡
+              إلغاء
             </button>
           </div>
         </form>
@@ -1821,9 +1822,9 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
   );
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Main Admin Page - Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„ÙƒØ§Ù…Ù„ Ø§Ù„Ù…ØµØ­Ø­
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────
+// Main Admin Page - الكود الكامل المصحح
+// ─────────────────────────────────────────────────────────────
 export default function Admin() {
   const [params] = useSearchParams();
 
@@ -1866,7 +1867,7 @@ export default function Admin() {
     }
   });
 
-  // â”€â”€ Ø­ÙØ¸ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª Ø§Ù„Ù…Ø®ØªØ§Ø±Ø© â”€â”€
+  // ── حفظ المجموعات المختارة ──
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -1874,7 +1875,7 @@ export default function Admin() {
         JSON.stringify(selectedGroupIds),
       );
     } catch {
-      /* ØªØ¬Ø§Ù‡Ù„ */
+      /* تجاهل */
     }
   }, [selectedGroupIds]);
 
@@ -1883,7 +1884,7 @@ export default function Admin() {
     [],
   );
 
-  // â”€â”€ Ø­ÙØ¸ Ø§Ù„ØªØ±ØªÙŠØ¨ â”€â”€
+  // ── حفظ الترتيب ──
   const persistOrder = useCallback(
     (nextProducts) => {
       setProducts(nextProducts);
@@ -1894,15 +1895,15 @@ export default function Admin() {
         body: JSON.stringify({ order: nextProducts.map((p) => p.id) }),
       })
         .then((res) => {
-          if (!res.ok) notify("ÙØ´Ù„ Ø­ÙØ¸ Ø§Ù„ØªØ±ØªÙŠØ¨", "error");
+          if (!res.ok) notify("فشل حفظ الترتيب", "error");
         })
-        .catch(() => notify("ÙØ´Ù„ Ø­ÙØ¸ Ø§Ù„ØªØ±ØªÙŠØ¨ â€” ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø§ØªØµØ§Ù„", "error"))
+        .catch(() => notify("فشل حفظ الترتيب — تحقق من الاتصال", "error"))
         .finally(() => setSavingOrder(false));
     },
     [notify],
   );
 
-  // â”€â”€ Ø¨Ù†Ø§Ø¡ ÙƒØªÙ„ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª â”€â”€
+  // ── بناء كتل المجموعات ──
   const buildGroupBlocks = useCallback((list) => {
     const order = [];
     const map = new Map();
@@ -1917,7 +1918,7 @@ export default function Admin() {
     return { order, map };
   }, []);
 
-  // â”€â”€ ØªØ­Ø±ÙŠÙƒ Ù…Ø¬Ù…ÙˆØ¹Ø© â”€â”€
+  // ── تحريك مجموعة ──
   const moveSelectedGroup = useCallback(
     (gid, newPosition) => {
       const i = selectedGroupIds.indexOf(gid);
@@ -1942,7 +1943,7 @@ export default function Admin() {
     [selectedGroupIds, products, buildGroupBlocks, persistOrder],
   );
 
-  // â”€â”€ ØªØ­Ø¯ÙŠØ« ØªØ±ØªÙŠØ¨ Ù…Ù†ØªØ¬ â”€â”€
+  // ── تحديث ترتيب منتج ──
   const updateProductOrder = useCallback(
     (id, newPosition) => {
       const p = products.find((x) => x.id === id);
@@ -1962,7 +1963,7 @@ export default function Admin() {
     [products, buildGroupBlocks, persistOrder],
   );
 
-  // â”€â”€ Ø§Ø®ØªÙŠØ§Ø±/Ø¥Ù„ØºØ§Ø¡ Ø§Ø®ØªÙŠØ§Ø± Ù…Ø¬Ù…ÙˆØ¹Ø© â”€â”€
+  // ── اختيار/إلغاء اختيار مجموعة ──
   const toggleGroupSelect = useCallback(
     (gid) => {
       const next = selectedGroupIds.includes(gid)
@@ -1978,14 +1979,14 @@ export default function Admin() {
     [selectedGroupIds, products, buildGroupBlocks, persistOrder],
   );
 
-  // â”€â”€ Ø§Ø®ØªÙŠØ§Ø±/Ø¥Ù„ØºØ§Ø¡ Ø§Ø®ØªÙŠØ§Ø± Ù…Ù†ØªØ¬ â”€â”€
+  // ── اختيار/إلغاء اختيار منتج ──
   const toggleSelect = useCallback((id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   }, []);
 
-  // â”€â”€ Ø§Ø®ØªÙŠØ§Ø± Ø§Ù„ÙƒÙ„ â”€â”€
+  // ── اختيار الكل ──
   const toggleSelectAll = useCallback(() => {
     const visibleIds = sortMode
       ? products.map((p) => p.id)
@@ -2009,11 +2010,11 @@ export default function Admin() {
     }
   }, [products, search, filterType, filterMaterial, filterMaterialCat, filterGroup, selectedIds, sortMode, materialGroups]);
 
-  // â”€â”€ Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ­Ø¯ÙŠØ¯ â”€â”€
+  // ── إلغاء التحديد ──
   const clearSelection = useCallback(() => setSelectedIds([]), []);
 
   // ============================================================
-  // ðŸ”¥ ØªØ¹Ø±ÙŠÙ groupBlocksView Ù‚Ø¨Ù„ Ø§Ø³ØªØ®Ø¯Ø§Ù…Ù‡
+  // 🔥 تعريف groupBlocksView قبل استخدامه
   // ============================================================
   const groupsById = useMemo(
     () => new Map(groups.map((g) => [g.id, g])),
@@ -2029,14 +2030,14 @@ export default function Admin() {
       gid,
       label:
         gid === "none"
-          ? "Ø¨Ø¯ÙˆÙ† Ù…Ø¬Ù…ÙˆØ¹Ø©"
-          : groupsById.get(gid)?.name || "Ù…Ø¬Ù…ÙˆØ¹Ø© Ù…Ø­Ø°ÙˆÙØ©",
+          ? "بدون مجموعة"
+          : groupsById.get(gid)?.name || "مجموعة محذوفة",
       products: allGroupBlocks.map.get(gid) || [],
     }));
   }, [selectedGroupIds, groupsById, allGroupBlocks]);
 
   // ============================================================
-  // ðŸ”¥ ØªØ¹Ø±ÙŠÙ toggleSelectAllInGroup Ø¨Ø¹Ø¯ groupBlocksView
+  // 🔥 تعريف toggleSelectAllInGroup بعد groupBlocksView
   // ============================================================
   const toggleSelectAllInGroup = useCallback(
     (groupId) => {
@@ -2056,7 +2057,7 @@ export default function Admin() {
   );
 
   // ============================================================
-  // Ø¨Ø§Ù‚ÙŠ Ø§Ù„Ù€ useMemo
+  // باقي الـ useMemo
   // ============================================================
   const availableGroupChips = useMemo(() => {
     const chips = groups
@@ -2069,7 +2070,7 @@ export default function Admin() {
     if (allGroupBlocks.map.has("none") && !selectedGroupIds.includes("none")) {
       chips.push({
         gid: "none",
-        name: "Ø¨Ø¯ÙˆÙ† Ù…Ø¬Ù…ÙˆØ¹Ø©",
+        name: "بدون مجموعة",
         count: allGroupBlocks.map.get("none").length,
       });
     }
@@ -2088,7 +2089,7 @@ export default function Admin() {
         return matchS && matchT && matchM && matchMCat && matchG;
       });
 
-  // â”€â”€ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª â”€â”€
+  // ── تحميل البيانات ──
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -2122,7 +2123,7 @@ export default function Admin() {
       setManualLids(Array.isArray(ml) ? ml : []);
     } catch (error) {
       console.error("Error loading data:", error);
-      notify("ÙØ´Ù„ ØªØ­Ù…ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª", "error");
+      notify("فشل تحميل البيانات", "error");
       setProducts([]);
       setTypes([]);
       setMaterialGroups([]);
@@ -2132,7 +2133,7 @@ export default function Admin() {
     }
   }, [notify]);
 
-  // â”€â”€ expose load â”€â”€
+  // ── expose load ──
   useEffect(() => {
     window.refreshAdminData = load;
     return () => {
@@ -2146,14 +2147,14 @@ export default function Admin() {
     }
   }, [load, authed]);
 
-  // â”€â”€ Ù…Ø³Ø­ Ø§Ù„ØªØ­Ø¯ÙŠØ¯ Ø¹Ù†Ø¯ Ø§Ù„Ø®Ø±ÙˆØ¬ Ù…Ù† ÙˆØ¶Ø¹ Ø§Ù„ØªØ±ØªÙŠØ¨ â”€â”€
+  // ── مسح التحديد عند الخروج من وضع الترتيب ──
   useEffect(() => {
     if (!sortMode) {
       setSelectedIds([]);
     }
   }, [sortMode]);
 
-  // â”€â”€ ÙØªØ­ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„ â”€â”€
+  // ── فتح التعديل ──
   const openEdit = async (p) => {
     try {
       const res = await apiFetch(`/${p.id}`);
@@ -2162,23 +2163,23 @@ export default function Admin() {
       setEditTarget(data);
       setShowForm(true);
     } catch (err) {
-      notify("ÙØ´Ù„ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ù†ØªØ¬", "error");
+      notify("فشل تحميل بيانات المنتج", "error");
       console.error("Error fetching product:", err);
     }
   };
 
-  // â”€â”€ Ø­Ø°Ù Ù…Ù†ØªØ¬ â”€â”€
+  // ── حذف منتج ──
   const handleDelete = async () => {
     try {
       const res = await apiFetch(`/${deleteId}`, { method: "DELETE" });
       if (res.ok) {
-        notify("ØªÙ… Ø§Ù„Ø­Ø°Ù");
+        notify("تم الحذف");
         load();
       } else {
-        notify("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù", "error");
+        notify("فشل الحذف", "error");
       }
     } catch (err) {
-      notify("ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù â€” ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø§ØªØµØ§Ù„", "error");
+      notify("فشل الحذف — تحقق من الاتصال", "error");
     }
     setDeleteId(null);
   };
@@ -2187,13 +2188,13 @@ export default function Admin() {
 
   return (
     <div dir="rtl" className="pt-20 min-h-screen bg-gray-50">
-      {/* Ø§Ù„Ù‡ÙŠØ¯Ø± */}
+      {/* الهيدر */}
       <div className="bg-brand-blue text-white py-10 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black">ðŸ› ï¸ Ù„ÙˆØ­Ø© ØªØ­ÙƒÙ… Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª</h1>
+            <h1 className="text-2xl font-black">🛠️ لوحة تحكم المنتجات</h1>
             <p className="text-blue-200 text-sm mt-1">
-              {Array.isArray(products) ? products.length : 0} Ù…Ù†ØªØ¬
+              {Array.isArray(products) ? products.length : 0} منتج
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -2205,7 +2206,7 @@ export default function Admin() {
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border border-white/30 text-white hover:bg-white/10 transition"
             >
               <Settings size={15} />
-              Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø´Ø§Ø´Ø© Ø§Ù„Ø¹Ø±Ø¶
+              إعدادات شاشة العرض
             </button>
             <button
               onClick={() => {
@@ -2215,7 +2216,7 @@ export default function Admin() {
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-red-500/20 border border-red-400/50 text-red-100 hover:bg-red-500/40 transition"
             >
               <LogOut size={15} />
-              Ø®Ø±ÙˆØ¬
+              خروج
             </button>
             <button
               onClick={() => {
@@ -2225,7 +2226,7 @@ export default function Admin() {
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-white/15 border border-white/30 text-white hover:bg-white/25 transition"
             >
               <Tv size={15} />
-              ÙØªØ­ Ø´Ø§Ø´Ø© Ø§Ù„Ø¹Ø±Ø¶
+              فتح شاشة العرض
             </button>
             <button
               onClick={() => {
@@ -2239,7 +2240,7 @@ export default function Admin() {
               }`}
             >
               <ListOrdered size={15} />
-              {sortMode ? "ØªÙ… â€” Ø±Ø¬ÙˆØ¹ Ù„Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø¹Ø§Ø¯ÙŠ" : "ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª"}
+              {sortMode ? "تم — رجوع للعرض العادي" : "ترتيب المنتجات"}
             </button>
             <button
               onClick={() => setShowSettings((v) => !v)}
@@ -2267,23 +2268,23 @@ export default function Admin() {
               className="flex items-center gap-2 px-5 py-2.5 bg-brand-green text-white text-sm font-bold rounded-full hover:opacity-90 transition"
             >
               <Plus size={16} />
-              Ø¥Ø¶Ø§ÙØ© Ù…Ù†ØªØ¬
+              إضافة منتج
             </button>
           </div>
         </div>
         <p className="max-w-7xl mx-auto mt-3 text-blue-200/70 text-xs flex items-center gap-1.5">
           <MonitorPlay size={13} />
-          Ø´Ø§Ø´Ø© Ø§Ù„Ø¹Ø±Ø¶ Ù…Ø­Ø¬ÙˆØ¨Ø© Ø¹Ù† Ø£ÙŠ Ø­Ø¯ â€” Ø¨ØªØªÙØªØ­ Ø¨Ø³ Ù…Ù† Ø§Ù„Ø²Ø±Ø§Ø±ÙŠÙ† Ø¯ÙˆÙ„.
+          شاشة العرض محجوبة عن أي حد — بتتفتح بس من الزرارين دول.
         </p>
         {sortMode && (
           <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 text-blue-100 text-xs bg-white/10 rounded-xl px-4 py-2.5">
             <Hash size={14} className="shrink-0" />
             <span>
-              Ø§ÙƒØªØ¨ Ø§Ù„Ø±Ù‚Ù… Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ Ù„ØªØ­Ø¯ÙŠØ¯ ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ø£Ùˆ Ø§Ù„Ù…Ù†ØªØ¬ â€” Ø§Ù„Ø±Ù‚Ù… 1 ÙŠØ¸Ù‡Ø±
-              Ø£ÙˆÙ„Ø§Ù‹. Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ù€ Checkbox Ù„ØªØ­Ø¯ÙŠØ¯ Ù…Ù†ØªØ¬Ø§Øª Ù…ØªØ¹Ø¯Ø¯Ø© ÙˆØªØºÙŠÙŠØ± Ù…Ø¬Ù…ÙˆØ¹ØªÙ‡Ù…
-              Ø¯ÙØ¹Ø© ÙˆØ§Ø­Ø¯Ø©.
+              اكتب الرقم المطلوب لتحديد ترتيب المجموعة أو المنتج — الرقم 1 يظهر
+              أولاً. استخدم الـ Checkbox لتحديد منتجات متعددة وتغيير مجموعتهم
+              دفعة واحدة.
               {savingOrder && (
-                <span className="mr-2 font-bold">Ø¬Ø§Ø±Ù Ø§Ù„Ø­ÙØ¸...</span>
+                <span className="mr-2 font-bold">جارِ الحفظ...</span>
               )}
             </span>
           </div>
@@ -2292,7 +2293,7 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
         
-        {/* Ø§Ù„Ø£ØºØ·ÙŠØ© Ø§Ù„ÙŠØ¯ÙˆÙŠØ© */}
+        {/* الأغطية اليدوية */}
         {manualLids.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-3xl p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
@@ -2301,10 +2302,10 @@ export default function Admin() {
               </div>
               <div>
                 <h3 className="text-lg font-black text-orange-800">
-                  Ø£ØºØ·ÙŠØ© ÙŠØ¯ÙˆÙŠØ© ØªØ­ØªØ§Ø¬ ØªØ³Ø¬ÙŠÙ„ ({manualLids.length})
+                  أغطية يدوية تحتاج تسجيل ({manualLids.length})
                 </h3>
                 <p className="text-sm text-orange-600/80 mt-0.5">
-                  Ù‡Ø°Ù‡ Ø§Ù„Ø£ØºØ·ÙŠØ© ØªÙ…Øª Ø¥Ø¶Ø§ÙØªÙ‡Ø§ ÙƒØªØ§Ø¨ÙŠØ§Ù‹ ÙÙ‚Ø·. Ù„Ø±Ø¨Ø·Ù‡Ø§ Ø¨ØµÙˆØ± ÙˆÙƒÙˆØ¯ØŒ Ù‚Ù… Ø¨Ø¥Ù†Ø´Ø§Ø¦Ù‡Ø§ ÙƒÙ…Ù†ØªØ¬Ø§Øª Ø­Ù‚ÙŠÙ‚ÙŠØ©.
+                  هذه الأغطية تمت إضافتها كتابياً فقط. لربطها بصور وكود، قم بإنشائها كمنتجات حقيقية.
                 </p>
               </div>
             </div>
@@ -2314,7 +2315,7 @@ export default function Admin() {
                   <button 
                     onClick={() => setViewManualLid(ml)}
                     className="font-bold text-gray-700 hover:text-brand-blue flex items-center gap-1 transition-colors"
-                    title="Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø©"
+                    title="عرض المنتجات المرتبطة"
                   >
                     {ml.name}
                     <AlertCircle size={14} className="text-gray-400" />
@@ -2323,7 +2324,7 @@ export default function Admin() {
                   <button
                     onClick={() => {
                       setEditTarget(null);
-                      const lidType = types.find(t => t.name === "ØºØ·Ø§Ø¡");
+                      const lidType = types.find(t => t.name === "غطاء");
                       setShowForm({
                         isManualLidConversion: true,
                         manualLidId: ml.id,
@@ -2334,15 +2335,15 @@ export default function Admin() {
                       });
                     }}
                     className="bg-brand-blue text-white text-xs px-3 py-1.5 rounded-lg font-bold hover:bg-brand-blueDark transition-colors flex items-center gap-1.5"
-                    title="Ø¥Ù†Ø´Ø§Ø¡ ØºØ·Ø§Ø¡ Ø­Ù‚ÙŠÙ‚ÙŠ"
+                    title="إنشاء غطاء حقيقي"
                   >
                     <Plus size={14} />
-                    Ø¥Ù†Ø´Ø§Ø¡
+                    إنشاء
                   </button>
                   <button
                     onClick={() => setDeleteManualLidConfirm(ml)}
                     className="bg-red-50 text-red-600 hover:bg-red-500 hover:text-white transition-colors p-1.5 rounded-lg"
-                    title="Ø­Ø°Ù"
+                    title="حذف"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -2352,7 +2353,7 @@ export default function Admin() {
           </div>
         )}
 
-        {/* Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª */}
+        {/* الإعدادات */}
         <AnimatePresence>
           {showSettings && (
             <motion.div
@@ -2372,7 +2373,7 @@ export default function Admin() {
           )}
         </AnimatePresence>
 
-        {/* Ø§Ù„Ø¨Ø­Ø« ÙˆØ§Ù„ÙÙ„ØªØ±Ø© */}
+        {/* البحث والفلترة */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px] max-w-xs">
             <Search
@@ -2382,7 +2383,7 @@ export default function Admin() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„ÙƒÙˆØ¯..."
+              placeholder="بحث بالاسم أو الكود..."
               className="w-full pr-10 pl-4 py-2.5 rounded-xl border border-gray-200 text-sm bg-white
                          focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
             />
@@ -2395,7 +2396,7 @@ export default function Admin() {
                 className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               >
-                <option value="">ÙƒÙ„ Ø§Ù„Ø£Ù†ÙˆØ§Ø¹</option>
+                <option value="">كل الأنواع</option>
                 {types.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name}
@@ -2412,7 +2413,7 @@ export default function Admin() {
                 className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               >
-                <option value="">ÙƒÙ„ ÙØ¦Ø§Øª Ø§Ù„Ø®Ø§Ù…Ø§Øª</option>
+                <option value="">كل فئات الخامات</option>
                 {materialGroups.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
@@ -2426,7 +2427,7 @@ export default function Admin() {
                 className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               >
-                <option value="">ÙƒÙ„ Ø§Ù„Ø®Ø§Ù…Ø§Øª Ø§Ù„ØªÙØµÙŠÙ„ÙŠØ©</option>
+                <option value="">كل الخامات التفصيلية</option>
                 {materialGroups
                   .filter(g => !filterMaterialCat || g.id === filterMaterialCat)
                   .flatMap((g) => g.materials || [])
@@ -2443,7 +2444,7 @@ export default function Admin() {
                 className="py-2.5 px-4 rounded-xl border border-gray-200 text-sm bg-white
                            focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
               >
-                <option value="">ÙƒÙ„ Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª</option>
+                <option value="">كل المجموعات</option>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
@@ -2455,7 +2456,7 @@ export default function Admin() {
             </>
           )}
 
-          {/* Ø£Ø²Ø±Ø§Ø± Ø§Ù„ØªØ­Ø¯ÙŠØ¯ Ø§Ù„Ø¬Ù…Ø§Ø¹ÙŠ */}
+          {/* أزرار التحديد الجماعي */}
           {sortMode && (
             <div className="flex items-center gap-2 mr-auto">
               {selectedIds.length > 0 && (
@@ -2465,13 +2466,13 @@ export default function Admin() {
                     className="flex items-center gap-2 px-4 py-2 bg-brand-blue text-white text-sm font-bold rounded-xl hover:opacity-90 transition"
                   >
                     <Copy size={14} />
-                    ØªØºÙŠÙŠØ± Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© ({selectedIds.length})
+                    تغيير المجموعة ({selectedIds.length})
                   </button>
                   <button
                     onClick={clearSelection}
                     className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-500 transition"
                   >
-                    Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ­Ø¯ÙŠØ¯
+                    إلغاء التحديد
                   </button>
                 </>
               )}
@@ -2485,17 +2486,17 @@ export default function Admin() {
                 ) : (
                   <Square size={15} />
                 )}
-                ØªØ­Ø¯ÙŠØ¯ Ø§Ù„ÙƒÙ„
+                تحديد الكل
               </button>
             </div>
           )}
         </div>
 
-        {/* Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª Ø§Ù„Ù…Ø®ØªØ§Ø±Ø© Ù„Ù„ØªØ±ØªÙŠØ¨ */}
+        {/* المجموعات المختارة للترتيب */}
         {sortMode && (
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 className="text-sm font-extrabold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Layers size={15} /> Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª ({selectedGroupIds.length} Ù…Ø®ØªØ§Ø±Ø©)
+              <Layers size={15} /> المجموعات ({selectedGroupIds.length} مختارة)
             </h3>
 
             {selectedGroupIds.length > 0 && (
@@ -2503,8 +2504,8 @@ export default function Admin() {
                 {selectedGroupIds.map((gid, idx) => {
                   const label =
                     gid === "none"
-                      ? "Ø¨Ø¯ÙˆÙ† Ù…Ø¬Ù…ÙˆØ¹Ø©"
-                      : groupsById.get(gid)?.name || "Ù…Ø¬Ù…ÙˆØ¹Ø© Ù…Ø­Ø°ÙˆÙØ©";
+                      ? "بدون مجموعة"
+                      : groupsById.get(gid)?.name || "مجموعة محذوفة";
                   const count = allGroupBlocks.map.get(gid)?.length || 0;
                   return (
                     <div
@@ -2536,12 +2537,12 @@ export default function Admin() {
                         {label}
                       </span>
                       <span className="text-xs text-gray-400 shrink-0">
-                        {count} Ù…Ù†ØªØ¬
+                        {count} منتج
                       </span>
                       <button
                         onClick={() => toggleGroupSelect(gid)}
                         className="p-1 rounded-lg hover:bg-red-50 text-red-400 transition-colors shrink-0"
-                        title="Ø¥Ø®ÙØ§Ø¡ Ù…Ù† Ù‡Ø°Ù‡ Ø§Ù„Ø¬Ù„Ø³Ø©"
+                        title="إخفاء من هذه الجلسة"
                       >
                         <EyeOff size={15} />
                       </button>
@@ -2564,19 +2565,19 @@ export default function Admin() {
               {availableGroupChips.length === 0 &&
                 selectedGroupIds.length === 0 && (
                   <p className="text-sm text-gray-400">
-                    Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¬Ù…ÙˆØ¹Ø§Øª ÙÙ‰ Ù‚Ø§Ø¹Ø¯Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.
+                    لا توجد مجموعات فى قاعدة البيانات.
                   </p>
                 )}
             </div>
             <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-              Ø§Ø®ØªØ§Ø± Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø© Ø§Ù„Ù„ÙŠ Ø¹Ø§ÙŠØ² ØªØ±ØªØ¨Ù‡Ø§ØŒ ÙˆØ§ÙƒØªØ¨ Ø±Ù‚Ù…Ù‡Ø§ Ø§Ù„Ø¬Ø¯ÙŠØ¯. ÙƒÙ„ ØªØºÙŠÙŠØ±
-              Ø¨ÙŠØªØ­ÙØ¸ ÙÙˆØ±Ø§Ù‹. Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ù€ Checkbox Ù„ØªØ­Ø¯ÙŠØ¯ Ù…Ù†ØªØ¬Ø§Øª Ù…ØªØ¹Ø¯Ø¯Ø© ÙˆØªØºÙŠÙŠØ±
-              Ù…Ø¬Ù…ÙˆØ¹ØªÙ‡Ù… Ø¯ÙØ¹Ø© ÙˆØ§Ø­Ø¯Ø©.
+              اختار المجموعة اللي عايز ترتبها، واكتب رقمها الجديد. كل تغيير
+              بيتحفظ فوراً. استخدم الـ Checkbox لتحديد منتجات متعددة وتغيير
+              مجموعتهم دفعة واحدة.
             </p>
           </div>
         )}
 
-        {/* Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ */}
+        {/* المحتوى الرئيسي */}
         {loading ? (
           <div className="flex justify-center py-20">
             <Loader2 size={32} className="animate-spin text-brand-blue" />
@@ -2586,7 +2587,7 @@ export default function Admin() {
             <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-100">
               <Layers size={40} className="mx-auto mb-3 opacity-30" />
               <p className="text-sm">
-                Ø§Ø®ØªØ± Ù…Ø¬Ù…ÙˆØ¹Ø© ÙˆØ§Ø­Ø¯Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ Ù…Ù† Ø§Ù„Ø£Ø¹Ù„Ù‰ Ø¹Ø´Ø§Ù† ØªØ¨Ø¯Ø£ Ø§Ù„ØªØ±ØªÙŠØ¨
+                اختر مجموعة واحدة على الأقل من الأعلى عشان تبدأ الترتيب
               </p>
             </div>
           ) : (
@@ -2608,12 +2609,12 @@ export default function Admin() {
                   <tr>
                     {[
                       "",
-                      "Ø§Ù„Ø§Ø³Ù…",
-                      "Ø§Ù„ÙƒÙˆØ¯",
-                      "Ø§Ù„Ù†ÙˆØ¹",
-                      "Ø§Ù„Ø®Ø§Ù…Ø©",
-                      "Ø§Ù„Ù…Ù‚Ø§Ø³",
-                      "Ø§Ù„Ø­Ø±Ø§Ø±Ø©",
+                      "الاسم",
+                      "الكود",
+                      "النوع",
+                      "الخامة",
+                      "المقاس",
+                      "الحرارة",
                       "",
                     ].map((h, i) => (
                       <th
@@ -2641,7 +2642,7 @@ export default function Admin() {
                               e.target.src =
                                 "data:image/svg+xml;utf8," +
                                 encodeURIComponent(
-                                  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">Ù„Ø§ ØµÙˆØ±Ø©</text></svg>',
+                                  '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>',
                                 );
                             }}
                           />
@@ -2655,7 +2656,7 @@ export default function Admin() {
                         {p.name}
                       </td>
                       <td className="px-4 py-3 font-mono text-gray-500 text-xs">
-                        {p.code || "â€”"}
+                        {p.code || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
@@ -2674,11 +2675,11 @@ export default function Admin() {
                             </span>
                           </>
                         ) : (
-                          "â€”"
+                          "—"
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">
-                        {p.size || "â€”"}
+                        {p.size || "—"}
                       </td>
                       <td className="px-4 py-3">
                         <span
@@ -2691,10 +2692,10 @@ export default function Admin() {
                           }`}
                         >
                           {p.temp === "hot"
-                            ? "Ø³Ø§Ø®Ù†"
+                            ? "ساخن"
                             : p.temp === "cold"
-                              ? "Ø¨Ø§Ø±Ø¯"
-                              : "Ø³Ø§Ø®Ù† ÙˆØ¨Ø§Ø±Ø¯"}
+                              ? "بارد"
+                              : "ساخن وبارد"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -2704,21 +2705,21 @@ export default function Admin() {
                               setViewProduct(p);
                             }}
                             className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
-                            title="Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„"
+                            title="عرض التفاصيل"
                           >
                             <Eye size={15} />
                           </button>
                           <button
                             onClick={() => openEdit(p)}
                             className="p-2 rounded-lg hover:bg-blue-50 text-gray-400 hover:text-brand-blue transition-colors"
-                            title="ØªØ¹Ø¯ÙŠÙ„"
+                            title="تعديل"
                           >
                             <Pencil size={15} />
                           </button>
                           <button
                             onClick={() => setDeleteId(p.id)}
                             className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                            title="Ø­Ø°Ù"
+                            title="حذف"
                           >
                             <Trash2 size={15} />
                           </button>
@@ -2731,7 +2732,7 @@ export default function Admin() {
               {filtered.length === 0 && (
                 <div className="text-center py-16 text-gray-400">
                   <Package size={40} className="mx-auto mb-3 opacity-30" />
-                  <p className="text-sm">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ù†ØªØ¬Ø§Øª Ù…Ø·Ø§Ø¨Ù‚Ø©</p>
+                  <p className="text-sm">لا توجد منتجات مطابقة</p>
                 </div>
               )}
             </div>
@@ -2739,7 +2740,7 @@ export default function Admin() {
         )}
       </div>
 
-      {/* Ø§Ù„Ù€ Modals */}
+      {/* الـ Modals */}
       <AnimatePresence>
         {showForm && (
           <ProductFormModal
@@ -2789,14 +2790,14 @@ export default function Admin() {
                 <AlertCircle size={28} className="text-orange-500" />
               </div>
               <h3 className="font-extrabold text-xl text-gray-800 mb-2">
-                ØªÙØ§ØµÙŠÙ„ Ø§Ù„ØºØ·Ø§Ø¡: {viewManualLid.name}
+                تفاصيل الغطاء: {viewManualLid.name}
               </h3>
               <div className="text-sm text-gray-500 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100 max-h-32 overflow-y-auto">
-                <div className="font-bold mb-1">Ù…Ø±ØªØ¨Ø· Ø¨Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø§Ù„ØªØ§Ù„ÙŠØ©:</div>
+                <div className="font-bold mb-1">مرتبط بالمنتجات التالية:</div>
                 {viewManualLid.linked_products ? (
                   <div className="leading-relaxed">{viewManualLid.linked_products}</div>
                 ) : (
-                  <div className="text-gray-400 italic">Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…Ù†ØªØ¬Ø§Øª Ù…Ø±ØªØ¨Ø·Ø© Ø­Ø§Ù„ÙŠØ§Ù‹</div>
+                  <div className="text-gray-400 italic">لا يوجد منتجات مرتبطة حالياً</div>
                 )}
               </div>
               <div className="flex gap-3">
@@ -2808,13 +2809,13 @@ export default function Admin() {
                   className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90 flex items-center justify-center gap-2"
                 >
                   <Trash2 size={16} />
-                  Ø­Ø°Ù
+                  حذف
                 </button>
                 <button
                   onClick={() => setViewManualLid(null)}
                   className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
                 >
-                  Ø¥ØºÙ„Ø§Ù‚
+                  إغلاق
                 </button>
               </div>
             </motion.div>
@@ -2840,23 +2841,23 @@ export default function Admin() {
                 <Trash2 size={28} className="text-red-500" />
               </div>
               <h3 className="font-extrabold text-xl text-gray-800 mb-2">
-                Ø­Ø°Ù Ø§Ù„Ù…Ù†ØªØ¬ØŸ
+                حذف المنتج؟
               </h3>
               <p className="text-sm text-gray-500 mb-7">
-                Ù‡ÙŠØªØ­Ø°Ù Ù†Ù‡Ø§Ø¦ÙŠØ§Ù‹ Ù…Ø¹ ÙƒÙ„ ØµÙˆØ±Ù‡ Ù…Ù† Cloudinary.
+                هيتحذف نهائياً مع كل صوره من Cloudinary.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={handleDelete}
                   className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90"
                 >
-                  Ù†Ø¹Ù…ØŒ Ø§Ø­Ø°Ù
+                  نعم، احذف
                 </button>
                 <button
                   onClick={() => setDeleteId(null)}
                   className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
                 >
-                  Ø¥Ù„ØºØ§Ø¡
+                  إلغاء
                 </button>
               </div>
             </motion.div>
@@ -2886,32 +2887,32 @@ export default function Admin() {
                 <Trash2 size={28} className="text-red-500" />
               </div>
               <h3 className="font-extrabold text-xl text-gray-800 mb-2">
-                Ø­Ø°Ù Ø§Ù„ØºØ·Ø§Ø¡ Ø§Ù„ÙŠØ¯ÙˆÙŠØŸ
+                حذف الغطاء اليدوي؟
               </h3>
               <p className="text-sm text-gray-500 mb-7">
-                Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø§Ù„Ø­Ø°Ù Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ Ù„Ù„ØºØ·Ø§Ø¡ ({deleteManualLidConfirm.name})ØŸ
+                هل أنت متأكد من الحذف النهائي للغطاء ({deleteManualLidConfirm.name})؟
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={async () => {
                     try {
                       await apiFetch(`/manual-lids/${deleteManualLidConfirm.id}`, { method: "DELETE" });
-                      notify("ØªÙ… Ø­Ø°Ù Ø§Ù„ØºØ·Ø§Ø¡ Ø§Ù„ÙŠØ¯ÙˆÙŠ Ø¨Ù†Ø¬Ø§Ø­", "success");
+                      notify("تم حذف الغطاء اليدوي بنجاح", "success");
                       setDeleteManualLidConfirm(null);
                       load();
                     } catch (e) {
-                      notify("Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø­Ø°Ù: " + e.message, "error");
+                      notify("خطأ أثناء الحذف: " + e.message, "error");
                     }
                   }}
                   className="flex-1 py-3 bg-red-500 text-white font-bold rounded-2xl hover:opacity-90"
                 >
-                  Ù†Ø¹Ù…ØŒ Ø§Ø­Ø°Ù
+                  نعم، احذف
                 </button>
                 <button
                   onClick={() => setDeleteManualLidConfirm(null)}
                   className="flex-1 py-3 border-2 border-gray-200 text-gray-600 font-bold rounded-2xl hover:bg-gray-50"
                 >
-                  Ø¥Ù„ØºØ§Ø¡
+                  إلغاء
                 </button>
               </div>
             </motion.div>
@@ -2950,14 +2951,6 @@ export default function Admin() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* نافذة الإحصائيات */}
-      {showAnalytics && (
-        <AnalyticsModal
-          authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
-          onClose={() => setShowAnalytics(false)}
-        />
-      )}
     </div>
   );
 }
