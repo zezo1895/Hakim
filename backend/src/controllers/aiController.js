@@ -43,7 +43,7 @@ ${productsContext}
 
     // 3. Prepare Chat model
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-flash-latest",
       systemInstruction: systemPrompt 
     });
 
