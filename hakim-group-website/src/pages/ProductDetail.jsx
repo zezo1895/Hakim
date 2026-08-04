@@ -1,6 +1,6 @@
 // src/pages/ProductDetail.jsx
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Flame,
@@ -97,20 +97,28 @@ export default function ProductDetail({ popupId, isPopup = false }) {
   const [error, setError] = useState(null);
   const [activeImg, setActiveImg] = useState(0);
   const [zoomed, setZoomed] = useState(false);
+  const navigate = useNavigate();
 
-  // جلب بيانات المنتج والمنتجات المرتبطة
   useEffect(() => {
     const fetchProductData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // جلب المنتج الحالي
         const productResponse = await fetch(`${API}/products/${id}`);
         if (!productResponse.ok) {
+          if (!isPopup) {
+            navigate("/", { replace: true });
+          }
           throw new Error(`Failed to fetch product: ${productResponse.status}`);
         }
         const productData = await productResponse.json();
+        if (!productData) {
+          if (!isPopup) {
+            navigate("/", { replace: true });
+          }
+          throw new Error("Product not found");
+        }
         setProduct(productData);
 
         // جلب جميع المنتجات للعثور على المنتجات المرتبطة
