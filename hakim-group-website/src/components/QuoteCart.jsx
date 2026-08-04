@@ -28,17 +28,24 @@ export default function QuoteCart() {
   return (
     <>
       {/* Floating Button */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
         onClick={() => setIsCartOpen(true)}
-        className="fixed bottom-6 left-6 z-40 bg-brand-orange text-white p-4 rounded-full shadow-xl hover:scale-105 transition flex items-center justify-center"
+        className="fixed bottom-6 right-6 md:left-6 md:right-auto z-40 bg-[#25D366] text-white p-4 rounded-full shadow-2xl flex items-center justify-center border-2 border-white"
+        title="طلب عرض سعر"
       >
-        <ShoppingCart size={24} />
+        <ShoppingCart size={28} />
         {cart.length > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center">
+          <motion.span 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-black w-7 h-7 rounded-full flex items-center justify-center shadow-md border-2 border-white"
+          >
             {cart.length}
-          </span>
+          </motion.span>
         )}
-      </button>
+      </motion.button>
 
       {/* Cart Sidebar */}
       <AnimatePresence>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import TVShowcase from "./pages/TVShowcase";
+import TVShowcase from "../pages/TVShowcase";
 import TVGate, { grantTVAccess } from "../components/TVGate";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductDetail from "./ProductDetail";
