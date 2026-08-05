@@ -66,6 +66,11 @@ ${productsContext}
           role: h.role === 'user' ? 'user' : 'model',
           parts: [{ text: h.text }]
         }));
+      // Gemini requires first history message to be 'user' role
+      // Drop any leading 'model' messages (like the welcome message)
+      while (formattedHistory.length > 0 && formattedHistory[0].role === 'model') {
+        formattedHistory.shift();
+      }
     }
 
     const chat = model.startChat({
