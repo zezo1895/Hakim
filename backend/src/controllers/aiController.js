@@ -78,7 +78,7 @@ const chatWithAI = async (req, res) => {
         LEFT JOIN materials           m  ON m.id  = p.material_id
         LEFT JOIN material_categories mc ON mc.id = m.category_id
         ORDER BY p.sort_order ASC
-        LIMIT 200
+        LIMIT 1000
       `);
       products = rows || [];
     } catch (dbErr) {
