@@ -21,7 +21,18 @@ const chatWithAI = async (req, res) => {
     // 1. Fetch products context from database
     let products = [];
     try {
-      const [rows] = await db.query('SELECT name, item_code, type, material, size, temperature FROM products LIMIT 200');
+      const [rows] = await db.query(`
+        SELECT p.name, p.code, p.size, p.temp,
+               pt.name AS type_name,
+               m.name  AS material_name,
+               mc.name AS material_category
+        FROM products p
+        LEFT JOIN product_types       pt ON pt.id = p.type_id
+        LEFT JOIN materials           m  ON m.id  = p.material_id
+        LEFT JOIN material_categories mc ON mc.id = m.category_id
+        ORDER BY p.sort_order ASC
+        LIMIT 200
+      `);
       products = rows || [];
     } catch (dbErr) {
       console.error("Database error while fetching for AI context:", dbErr.message);
@@ -32,7 +43,7 @@ const chatWithAI = async (req, res) => {
     let productsContext = "لا توجد منتجات متاحة حالياً في قاعدة البيانات.";
     if (products.length > 0) {
       productsContext = products.map(p => 
-        `- المنتج: ${p.name || ''}, الكود: ${p.item_code || ''}, النوع: ${p.type || ''}, الخامة: ${p.material || ''}, المقاس: ${p.size || ''}, الحرارة: ${p.temperature || ''}`
+        `- المنتج: ${p.name || ''}, الكود: ${p.code || ''}, النوع: ${p.type_name || ''}, الخامة: ${p.material_name || ''} (${p.material_category || ''}), المقاس: ${p.size || ''}, الحرارة: ${p.temp || ''}`
       ).join('\n');
     }
 
