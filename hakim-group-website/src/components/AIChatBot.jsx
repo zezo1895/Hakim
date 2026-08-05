@@ -5,17 +5,32 @@ import ReactMarkdown from "react-markdown";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+const DEFAULT_WELCOME = "أهلاً بيك في حكيم جروب! 🌟 أنا المساعد الذكي، أقدر أساعدك إزاي في اختيار أنسب خامات التغليف؟";
+
 export default function AIChatBot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    {
-      role: "model",
-      text: "أهلاً بيك في حكيم جروب! 🌟 أنا المساعد الذكي، أقدر أساعدك إزاي في اختيار أنسب خامات التغليف؟"
-    }
+    { role: "model", text: DEFAULT_WELCOME }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Fetch custom welcome message from admin settings
+  useEffect(() => {
+    const fetchWelcome = async () => {
+      try {
+        const res = await fetch(`${API}/ai/settings`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.welcome_message) {
+            setMessages([{ role: "model", text: data.welcome_message }]);
+          }
+        }
+      } catch (e) { /* fallback to default */ }
+    };
+    fetchWelcome();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

@@ -4,6 +4,54 @@ const db = require('../config/db');
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// ── Ensure ai_settings table exists ──────────────────────
+const ensureTable = async () => {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS ai_settings (
+        id INT PRIMARY KEY DEFAULT 1,
+        custom_instructions TEXT,
+        welcome_message VARCHAR(500) DEFAULT 'أهلاً بيك في حكيم جروب! 🌟 أنا المساعد الذكي، أقدر أساعدك إزاي في اختيار أنسب خامات التغليف؟',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    // Insert default row if not exists
+    await db.query(`
+      INSERT IGNORE INTO ai_settings (id, custom_instructions) VALUES (1, '')
+    `);
+  } catch (e) {
+    console.error("AI Settings table error:", e.message);
+  }
+};
+ensureTable();
+
+// ── GET AI Settings (Admin) ──────────────────────────────
+const getAISettings = async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM ai_settings WHERE id = 1');
+    res.json(rows[0] || { custom_instructions: '', welcome_message: '' });
+  } catch (error) {
+    console.error("Get AI Settings Error:", error.message);
+    res.status(500).json({ error: 'Failed to fetch AI settings' });
+  }
+};
+
+// ── UPDATE AI Settings (Admin) ───────────────────────────
+const updateAISettings = async (req, res) => {
+  try {
+    const { custom_instructions, welcome_message } = req.body;
+    await db.query(
+      'UPDATE ai_settings SET custom_instructions = ?, welcome_message = ? WHERE id = 1',
+      [custom_instructions || '', welcome_message || '']
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Update AI Settings Error:", error.message);
+    res.status(500).json({ error: 'Failed to update AI settings' });
+  }
+};
+
+// ── Chat with AI (Public) ────────────────────────────────
 const chatWithAI = async (req, res) => {
   try {
     const { message, history } = req.body;
@@ -12,7 +60,6 @@ const chatWithAI = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Check API Key
     if (!process.env.GEMINI_API_KEY) {
       console.error("GEMINI_API_KEY is not set");
       return res.status(500).json({ error: 'AI service not configured' });
@@ -36,7 +83,17 @@ const chatWithAI = async (req, res) => {
       products = rows || [];
     } catch (dbErr) {
       console.error("Database error while fetching for AI context:", dbErr.message);
-      // Continue without products - AI will still work but without product context
+    }
+
+    // 2. Fetch admin custom instructions
+    let customInstructions = '';
+    try {
+      const [settings] = await db.query('SELECT custom_instructions FROM ai_settings WHERE id = 1');
+      if (settings && settings[0] && settings[0].custom_instructions) {
+        customInstructions = settings[0].custom_instructions;
+      }
+    } catch (e) {
+      console.error("Error fetching AI custom instructions:", e.message);
     }
 
     // Formatting products for context
@@ -47,7 +104,7 @@ const chatWithAI = async (req, res) => {
       ).join('\n');
     }
 
-    // 2. Define System Prompt
+    // 3. Define System Prompt
     const systemPrompt = `أنت مندوب مبيعات ومساعد ذكي في شركة "حكيم جروب" المتخصصة في التعبئة والتغليف البلاستيكية والورقية للمطاعم والمصانع.
     
 مهمتك:
@@ -59,37 +116,13 @@ const chatWithAI = async (req, res) => {
 - لا تذكر أكواد المنتجات في سياق الحديث إلا إذا سأل العميل، بل اذكر اسم المنتج والمقاس بوضوح.
 - لما العميل يسأل عن تسعير أو سعر، قوله إن الأسعار بتتحدد حسب الكمية المطلوبة ووجهه إنه يضغط زرار "طلب تسعير" في صفحة المنتج أو يتواصل معانا على الواتساب.
 
-## دليل الأحجام والاستخدامات (مهم جداً):
-استخدم الدليل ده عشان تربط بين كلام العميل العادي والمقاسات الفعلية في الكتالوج:
-
-### وحدات القياس:
-- المنتجات عندنا بتتقاس بالـ ml (مللي)، أو oz (أونصة)، أو جم (جرام)، أو سم (سنتيمتر قطر × ارتفاع) حسب نوع المنتج.
-- 1 أونصة (oz) = حوالي 30 ml تقريباً.
-
-### تحويل كلام العميل لأحجام:
-- "قهوة صغيرة" أو "إسبريسو" = 100-150 ml أو 4-5 oz
-- "كوباية شاي" أو "قهوة عادية" = 150-250 ml أو 6-8 oz
-- "كوباية كبيرة" أو "عصير وسط" = 250-400 ml أو 10-14 oz
-- "عصير كبير" أو "سموذي" = 400-600 ml أو 16-20 oz
-- "وجبة صغيرة" أو "سلطة فردي" أو "حلويات" = 150-250 ml أو 100-200 جم
-- "وجبة وسط" أو "أرز فردي" أو "كشري صغير" = 250-500 ml أو 200-400 جم
-- "وجبة كبيرة" أو "أرز بسمتي وفراخ" أو "كشري كبير" = 500-1000 ml أو 400-750 جم
-- "وجبة عائلية" أو "حجم كبير أوي" = 1000 ml فأكثر أو 750 جم فأكثر
-- "صوص" أو "صلصة" = 30-120 ml (أكواب صغيرة)
-- "سلطانية شوربة" = 250-500 ml
-
-### نصائح ذكية للاقتراح:
-- لو العميل قال "سخن" أو "مايكرويف" → رشحله PP فقط (لأن PET و PS بيسيحوا).
-- لو العميل قال "بارد" أو "عصير" أو "سلطة" → رشحله PET (شفاف وشيك) أو PS.
-- لو العميل قال "شفاف" أو "يبان الأكل" → رشحله PET.
-- لو المنتج فيه أحجام قريبة من اللي العميل طلبه، رشحله أقرب حجم متاح واشرحله.
-- لو العميل مش محدد الحجم، اسأله: "حضرتك محتاج حجم فردي ولا عائلي؟"
+${customInstructions ? `## تعليمات إضافية من الإدارة:\n${customInstructions}\n` : ''}
 
 إليك كتالوج منتجاتنا الحالي (لا تخرج عنه أبداً):
 ${productsContext}
 `;
 
-    // 3. Prepare Chat model
+    // 4. Prepare Chat model
     const model = genAI.getGenerativeModel({ 
       model: "gemini-flash-latest",
       systemInstruction: systemPrompt 
@@ -104,8 +137,6 @@ ${productsContext}
           role: h.role === 'user' ? 'user' : 'model',
           parts: [{ text: h.text }]
         }));
-      // Gemini requires first history message to be 'user' role
-      // Drop any leading 'model' messages (like the welcome message)
       while (formattedHistory.length > 0 && formattedHistory[0].role === 'model') {
         formattedHistory.shift();
       }
@@ -131,5 +162,7 @@ ${productsContext}
 };
 
 module.exports = {
-  chatWithAI
+  chatWithAI,
+  getAISettings,
+  updateAISettings
 };

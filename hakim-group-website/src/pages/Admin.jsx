@@ -5,6 +5,7 @@ import TVGate, { grantTVAccess } from "../components/TVGate";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductDetail from "./ProductDetail";
 import AnalyticsModal from "../components/AnalyticsModal";
+import AISettingsModal from "../components/AISettingsModal";
 import {
   Plus,
   Trash2,
@@ -34,7 +35,8 @@ import {
   Square,
   Copy,
   LogOut,
-  BarChart3
+  BarChart3,
+  Bot
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -1848,6 +1850,7 @@ export default function Admin() {
   const [deleteManualLidConfirm, setDeleteManualLidConfirm] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showAISettings, setShowAISettings] = useState(false);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterMaterialCat, setFilterMaterialCat] = useState("");
@@ -2259,6 +2262,13 @@ export default function Admin() {
             >
               <BarChart3 size={15} />
               إحصائيات الموقع
+            </button>
+            <button
+              onClick={() => setShowAISettings(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full border border-blue-300/30 text-blue-200 hover:bg-blue-500 hover:text-white transition"
+            >
+              <Bot size={15} />
+              إعدادات الذكاء الاصطناعي
             </button>
             <button
               onClick={() => {
@@ -2957,6 +2967,12 @@ export default function Admin() {
         <AnalyticsModal
           authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
           onClose={() => setShowAnalytics(false)}
+        />
+      )}
+      {showAISettings && (
+        <AISettingsModal
+          authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
+          onClose={() => setShowAISettings(false)}
         />
       )}
     </div>
