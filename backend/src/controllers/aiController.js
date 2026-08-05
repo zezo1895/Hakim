@@ -87,7 +87,7 @@ ${productsContext}
     const chat = model.startChat({
       history: formattedHistory,
       generationConfig: {
-        maxOutputTokens: 500,
+        maxOutputTokens: 1500,
         temperature: 0.5,
       },
     });

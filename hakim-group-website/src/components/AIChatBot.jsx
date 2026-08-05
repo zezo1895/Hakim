@@ -120,12 +120,12 @@ export default function AIChatBot() {
                   key={idx} 
                   className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'self-end flex-row-reverse' : 'self-start'}`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-brand-orange text-white' : 'bg-brand-blue text-white'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-gray-800 text-white' : 'bg-brand-blue text-white'}`}>
                     {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                   </div>
                   <div className={`p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
                     msg.role === 'user' 
-                      ? 'bg-brand-orange text-white rounded-tl-sm' 
+                      ? 'bg-gray-800 text-white rounded-tl-sm' 
                       : 'bg-white text-gray-800 border border-gray-100 rounded-tr-sm'
                   }`}>
                     {msg.role === 'model' ? (
