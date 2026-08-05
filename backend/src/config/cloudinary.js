@@ -18,7 +18,6 @@ const storage = new CloudinaryStorage({
     return {
       folder: `hakim-group/products/${productCode}`, // هنا بيعمل فولدر مخصص لكل كود منتج 📁
       allowed_formats: ["jpg", "jpeg", "png", "webp"],
-      transformation: [{ width: 1200, quality: "auto", fetch_format: "auto" }],
     };
   },
 });
