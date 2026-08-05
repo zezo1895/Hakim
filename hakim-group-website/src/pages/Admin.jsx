@@ -900,7 +900,7 @@ function ImageUploader({
   const ref = useRef();
   const add = (files) => {
     const valid = Array.from(files).filter(
-      (f) => f.type.startsWith("image/") && f.size <= 5 * 1024 * 1024,
+      (f) => f.type.startsWith("image/") && f.size <= 8 * 1024 * 1024,
     );
     onNewFiles((p) => [...p, ...valid]);
   };
