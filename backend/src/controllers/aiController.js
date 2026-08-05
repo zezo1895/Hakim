@@ -12,19 +12,29 @@ const chatWithAI = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    // Check API Key
+    if (!process.env.GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY is not set");
+      return res.status(500).json({ error: 'AI service not configured' });
+    }
+
     // 1. Fetch products context from database
     let products = [];
     try {
-      const result = await db.query('SELECT name, item_code, type, material, size, temperature FROM products');
-      products = result.rows || [];
+      const [rows] = await db.query('SELECT name, item_code, type, material, size, temperature FROM products LIMIT 200');
+      products = rows || [];
     } catch (dbErr) {
-      console.error("Database error while fetching for AI context:", dbErr);
+      console.error("Database error while fetching for AI context:", dbErr.message);
+      // Continue without products - AI will still work but without product context
     }
 
     // Formatting products for context
-    const productsContext = products.map(p => 
-      `- المنتج: ${p.name}, الكود: ${p.item_code}, النوع: ${p.type}, الخامة: ${p.material}, المقاس: ${p.size}, الحرارة: ${p.temperature}`
-    ).join('\n');
+    let productsContext = "لا توجد منتجات متاحة حالياً في قاعدة البيانات.";
+    if (products.length > 0) {
+      productsContext = products.map(p => 
+        `- المنتج: ${p.name || ''}, الكود: ${p.item_code || ''}, النوع: ${p.type || ''}, الخامة: ${p.material || ''}, المقاس: ${p.size || ''}, الحرارة: ${p.temperature || ''}`
+      ).join('\n');
+    }
 
     // 2. Define System Prompt
     const systemPrompt = `أنت مندوب مبيعات ومساعد ذكي في شركة "حكيم جروب" المتخصصة في التعبئة والتغليف البلاستيكية والورقية للمطاعم والمصانع.
@@ -47,14 +57,15 @@ ${productsContext}
       systemInstruction: systemPrompt 
     });
 
-    // Generate response using single turn (or pass history if provided)
-    // Formatting history for Gemini if we want multi-turn
+    // Format history for Gemini multi-turn
     let formattedHistory = [];
     if (history && Array.isArray(history)) {
-      formattedHistory = history.map(h => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: h.text }]
-      }));
+      formattedHistory = history
+        .filter(h => h && h.text && h.role)
+        .map(h => ({
+          role: h.role === 'user' ? 'user' : 'model',
+          parts: [{ text: h.text }]
+        }));
     }
 
     const chat = model.startChat({
@@ -71,7 +82,7 @@ ${productsContext}
     res.json({ text: responseText });
 
   } catch (error) {
-    console.error("AI Error:", error);
+    console.error("AI Error:", error.message || error);
     res.status(500).json({ error: 'Failed to process AI request', details: error.message });
   }
 };
