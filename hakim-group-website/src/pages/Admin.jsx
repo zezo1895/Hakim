@@ -1089,6 +1089,7 @@ const EMPTY = {
   material_id: "",
   temp: "both",
   group_id: "",
+  related_groups: [],
   size: "",
   notes: "",
 };
@@ -1130,6 +1131,7 @@ function ProductFormModal({
       material_id: editProduct.material_id || "",
       temp: editProduct.temp,
       group_id: editProduct.group_id || "",
+      related_groups: editProduct.related_groups || [],
       size: editProduct.size || "",
       notes: editProduct.notes || "",
     });
@@ -1176,6 +1178,8 @@ function ProductFormModal({
       Object.entries(form).forEach(([k, v]) => {
         if (k === "group_id") {
           fd.append(k, finalGroupId || "");
+        } else if (k === "related_groups") {
+          fd.append(k, JSON.stringify(v || []));
         } else if (v !== null && v !== undefined && v !== "") {
           fd.append(k, v);
         }
@@ -1392,6 +1396,38 @@ function ProductFormModal({
                 className="admin-input mt-2"
               />
             )}
+          </div>
+
+          <div>
+            <label className="admin-label">مجموعات إضافية مترابطة (اختياري - لربط هذا المنتج بمنتجات أخرى)</label>
+            <div className="admin-input max-h-40 overflow-y-auto bg-gray-50 flex flex-col gap-2 p-3">
+              {groups.filter(g => g.id !== form.group_id).map((g) => {
+                const isSelected = form.related_groups?.includes(g.id);
+                return (
+                  <label key={g.id} className="flex items-center gap-2 cursor-pointer text-sm font-bold text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setForm(f => {
+                          const rg = f.related_groups || [];
+                          return {
+                            ...f,
+                            related_groups: checked ? [...rg, g.id] : rg.filter(id => id !== g.id)
+                          };
+                        });
+                      }}
+                      className="w-4 h-4 text-brand-blue rounded border-gray-300 focus:ring-brand-blue"
+                    />
+                    {g.name}
+                  </label>
+                );
+              })}
+              {groups.filter(g => g.id !== form.group_id).length === 0 && (
+                <div className="text-xs text-gray-400">لا توجد مجموعات أخرى متاحة للاختيار</div>
+              )}
+            </div>
           </div>
 
           <div>

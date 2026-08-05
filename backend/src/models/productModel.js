@@ -22,7 +22,12 @@ const BASE_SELECT = `
     m.name   AS material_name,
     mc.name  AS material_category,
     pg.name  AS group_name,
-    ${IMG_CONCAT}
+    ${IMG_CONCAT},
+    (
+      SELECT GROUP_CONCAT(group_id)
+      FROM product_related_groups prg
+      WHERE prg.product_id = p.id
+    ) AS related_groups_raw
   FROM products p
   LEFT JOIN product_types       pt ON pt.id = p.type_id
   LEFT JOIN materials           m  ON m.id  = p.material_id
@@ -31,7 +36,14 @@ const BASE_SELECT = `
   LEFT JOIN product_images      pi ON pi.product_id = p.id
 `;
 
-const parse = (r) => r ? { ...r, images: parseImages(r.raw_images) } : null;
+const parse = (r) => {
+  if (!r) return null;
+  return {
+    ...r,
+    images: parseImages(r.raw_images),
+    related_groups: r.related_groups_raw ? r.related_groups_raw.split(',') : []
+  };
+};
 
 // ── Reads ──────────────────────────────────────────────────
 exports.getAll = async () => {
@@ -89,13 +101,18 @@ exports.getLids = (id) => db.query(`
   GROUP BY p.id
 `, [id]);
 
-exports.getSiblings = (groupId, excludeId) => db.query(`
-  SELECT p.id, p.name, p.code, p.size, MIN(pi.url) AS thumbnail
-  FROM products p
-  LEFT JOIN product_images pi ON pi.product_id = p.id
-  WHERE p.group_id = ? AND p.id != ?
-  GROUP BY p.id
-`, [groupId, excludeId]);
+exports.getSiblings = (groupIds, excludeId) => {
+  if (!groupIds || !groupIds.length) return Promise.resolve([[]]);
+  const ids = groupIds.map(id => db.escape(id)).join(',');
+  return db.query(`
+    SELECT p.id, p.name, p.code, p.size, MIN(pi.url) AS thumbnail
+    FROM products p
+    LEFT JOIN product_images pi ON pi.product_id = p.id
+    WHERE (p.group_id IN (${ids}) OR EXISTS (SELECT 1 FROM product_related_groups prg WHERE prg.product_id = p.id AND prg.group_id IN (${ids}))) 
+    AND p.id != ?
+    GROUP BY p.id
+  `, [excludeId]);
+};
 
 // ── Search ──────────────────────────────────────────────────
 exports.search = async (q) => {
@@ -184,6 +201,16 @@ exports.create = async (d) => {
     [id, d.name, d.code||null, d.type_id||null, d.material_id||null,
      d.temp, d.group_id||null, d.size||null, d.notes||null, insertOrder]
   );
+
+  if (d.related_groups) {
+    let groups = [];
+    try { groups = typeof d.related_groups === 'string' ? JSON.parse(d.related_groups) : d.related_groups; } catch(e) {}
+    if (Array.isArray(groups) && groups.length > 0) {
+      const values = groups.map(gid => [id, gid]);
+      await db.query(`INSERT IGNORE INTO product_related_groups (product_id, group_id) VALUES ?`, [values]);
+    }
+  }
+
   return id;
 };
 
@@ -197,12 +224,24 @@ exports.reorder = async (orderedIds) => {
   );
 };
 
-exports.update = (id, d) => db.query(
-  `UPDATE products SET name=?,code=?,type_id=?,material_id=?,temp=?,
-   group_id=?,size=?,notes=? WHERE id=?`,
-  [d.name, d.code||null, d.type_id||null, d.material_id||null,
-   d.temp, d.group_id||null, d.size||null, d.notes||null, id]
-);
+exports.update = async (id, d) => {
+  await db.query(
+    `UPDATE products SET name=?,code=?,type_id=?,material_id=?,temp=?,
+     group_id=?,size=?,notes=? WHERE id=?`,
+    [d.name, d.code||null, d.type_id||null, d.material_id||null,
+     d.temp, d.group_id||null, d.size||null, d.notes||null, id]
+  );
+
+  if (d.related_groups !== undefined) {
+    await db.query(`DELETE FROM product_related_groups WHERE product_id=?`, [id]);
+    let groups = [];
+    try { groups = typeof d.related_groups === 'string' ? JSON.parse(d.related_groups) : d.related_groups; } catch(e) {}
+    if (Array.isArray(groups) && groups.length > 0) {
+      const values = groups.map(gid => [id, gid]);
+      await db.query(`INSERT IGNORE INTO product_related_groups (product_id, group_id) VALUES ?`, [values]);
+    }
+  }
+};
 
 // تحديث "المجموعة" بس — مستخدمة فى التعديل الجماعي (Bulk Edit)، عشان محدش يبعث
 // من غير باقي بيانات المنتج (الاسم، الحرارة...) فيمسحها بالغلط. آمن تمامًا.

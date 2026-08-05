@@ -33,6 +33,17 @@ pool.getConnection()
         )
       `);
     } catch (e) {}
+    try {
+      await c.query(`
+        CREATE TABLE IF NOT EXISTS product_related_groups (
+          product_id VARCHAR(36) NOT NULL,
+          group_id VARCHAR(36) NOT NULL,
+          PRIMARY KEY (product_id, group_id)
+        )
+      `);
+    } catch (e) {
+      console.error("Failed to create product_related_groups table:", e.message);
+    }
     c.release(); 
   })
   .catch((e) => { console.error("❌ MySQL connection failed:", e.message); process.exit(1); });

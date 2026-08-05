@@ -39,8 +39,12 @@ exports.getOne = async (req, res) => {
   try {
     const product = await model.getById(req.params.id);
     if (!product) return res.status(404).json({ error: "Not found" });
-    const siblings = product.group_id
-      ? (await model.getSiblings(product.group_id, req.params.id))[0]
+    
+    let groupIds = product.related_groups ? [...product.related_groups] : [];
+    if (product.group_id) groupIds.push(product.group_id);
+    
+    const siblings = groupIds.length > 0
+      ? (await model.getSiblings(groupIds, req.params.id))[0]
       : [];
     res.json({ ...product, siblings });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -91,7 +95,7 @@ exports.update = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, code, type_id, material_id, temp, group_id, size, notes,
-            lid_ids, remove_image_ids } = req.body;
+            lid_ids, convert_manual_lid_id, related_groups, remove_image_ids } = req.body;
 
     let parsedLids = [];
     if (lid_ids) {
@@ -102,7 +106,7 @@ exports.update = async (req, res) => {
       }
     }
 
-    await model.update(id, { name, code, type_id, material_id, temp, group_id, size, notes });
+    await model.update(id, { name, code, type_id, material_id, temp, group_id, size, notes, related_groups });
 
     if (remove_image_ids) {
       const toRemove = JSON.parse(remove_image_ids);
