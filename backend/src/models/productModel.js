@@ -53,6 +53,62 @@ exports.getAll = async () => {
   return rows.map(parse);
 };
 
+// ── جلب كل الأغطية لكل المنتجات مرة واحدة ──
+exports.getAllLidsMap = async () => {
+  // الأغطية العادية (منتجات من نوع غطاء)
+  const [regularLids] = await db.query(`
+    SELECT pl.product_id,
+           p.id, p.name, p.code, p.size,
+           m.name AS material_name, mc.name AS material_category,
+           GROUP_CONCAT(DISTINCT CONCAT(pi.id,'::',pi.url,'::',pi.public_id) ORDER BY pi.sort_order SEPARATOR '||') AS raw_images,
+           MIN(pi.url) AS thumbnail
+    FROM product_lids pl
+    JOIN products p ON pl.lid_id = p.id
+    LEFT JOIN materials m ON m.id = p.material_id
+    LEFT JOIN material_categories mc ON mc.id = m.category_id
+    LEFT JOIN product_images pi ON pi.product_id = p.id
+    GROUP BY pl.product_id, p.id
+  `);
+
+  // الأغطية اليدوية
+  const [manualLids] = await db.query(`
+    SELECT pml.product_id,
+           ml.id, ml.name
+    FROM product_manual_lids pml
+    JOIN manual_lids ml ON pml.manual_lid_id = ml.id
+  `);
+
+  // تجميع الأغطية per product
+  const map = {};
+  for (const l of regularLids) {
+    if (!map[l.product_id]) map[l.product_id] = [];
+    map[l.product_id].push({
+      id: l.id,
+      name: l.name,
+      code: l.code,
+      size: l.size,
+      material_name: l.material_name,
+      material_category: l.material_category,
+      thumbnail: l.thumbnail,
+      images: l.raw_images ? l.raw_images.split('||').map(chunk => {
+        const [id, url, public_id] = chunk.split('::');
+        return { id, url, public_id };
+      }) : [],
+      isManual: false
+    });
+  }
+  for (const l of manualLids) {
+    if (!map[l.product_id]) map[l.product_id] = [];
+    map[l.product_id].push({
+      id: `manual_${l.id}`,
+      name: l.name,
+      isManual: true,
+      manual: true
+    });
+  }
+  return map;
+};
+
 exports.getById = async (id) => {
   const [rows] = await db.query(`${BASE_SELECT} WHERE p.id = ? GROUP BY p.id`, [id]);
   const product = parse(rows[0]);

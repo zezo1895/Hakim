@@ -29,6 +29,7 @@ router.delete("/groups/:id",       adminAuth, lookupCtrl.groups.remove);
 router.get("/search",              ctrl.search);
 router.get("/search/lids",         ctrl.searchLids);
 router.put("/reorder",             adminAuth, ctrl.reorder);
+router.get("/lids-map",            ctrl.getAllLidsMap);
 router.get("/",                    ctrl.getAll);
 
 // 🛠️ Manual Lids Routes ───────────────────────────────────────────────────

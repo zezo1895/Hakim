@@ -23,6 +23,11 @@ exports.getAll = async (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+exports.getAllLidsMap = async (req, res) => {
+  try { res.json(await model.getAllLidsMap()); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 // إعادة ترتيب المنتجات — بياخد { order: [id1, id2, id3, ...] } بالترتيب الجديد
 exports.reorder = async (req, res) => {
   try {
