@@ -1,33 +1,25 @@
 const db = require('../config/db');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Force IPv4 resolution globally to prevent Railway ENETUNREACH errors with Gmail IPv6
-const dns = require('dns');
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder('ipv4first');
-}
-
-// In-memory store for OTPs (In production, use Redis or DB, but memory is fine for a single admin)
+// In-memory store for OTPs
 const otpStore = new Map();
 
-// Helper to get transporter
-const getTransporter = () => {
-  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_APP_PASSWORD) {
-    throw new Error('Email configuration is missing in .env');
-  }
-  return nodemailer.createTransport({
-    host: '74.125.206.109', // Hardcoded IPv4 for smtp.gmail.com to bypass Railway IPv6 issues
-    port: 465,
-    secure: true,
-    tls: {
-      servername: 'smtp.gmail.com', // Required for SSL certificate validation against the IP
+const GAS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxN8O_8bb3yqfY-TyOkiC82b4_CAhlT0jl07X7nXF5CUvO1_Jq4JvnyWveNFWOC5MKk/exec';
+
+// Helper to send email via Google Apps Script Webhook
+const sendEmail = async (subject, body) => {
+  const response = await fetch(GAS_WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
     },
-    auth: {
-      user: process.env.ADMIN_EMAIL,
-      pass: process.env.ADMIN_APP_PASSWORD,
-    }
+    body: JSON.stringify({ subject, body }),
   });
+  
+  if (!response.ok) {
+    throw new Error('Failed to send email via Webhook');
+  }
+  return await response.json();
 };
 
 exports.getAppVersion = async (req, res) => {
@@ -67,13 +59,9 @@ exports.requestUpdate = async (req, res) => {
 
     otpStore.set('admin_update', { otp, expiry, downloadUrl });
 
-    const transporter = getTransporter();
-    
-    await transporter.sendMail({
-      from: `"Hakim Admin" <${process.env.ADMIN_EMAIL}>`,
-      to: process.env.ADMIN_EMAIL, // Send to the admin themselves
-      subject: 'Hakim App - Update OTP Code',
-      html: `
+    await sendEmail(
+      'Hakim App - Update OTP Code',
+      `
         <div style="font-family: Arial, sans-serif; padding: 20px; direction: rtl; text-align: right;">
           <h2>طلب تحديث التطبيق</h2>
           <p>لقد تم طلب تحديث تطبيق حكيم جروب بالرابط الجديد.</p>
@@ -82,7 +70,7 @@ exports.requestUpdate = async (req, res) => {
           <p>هذا الكود صالح لمدة 10 دقائق فقط.</p>
         </div>
       `
-    });
+    );
 
     res.json({ message: 'OTP sent successfully to your email.' });
   } catch (error) {
