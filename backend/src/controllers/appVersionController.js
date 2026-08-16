@@ -2,6 +2,12 @@ const db = require('../config/db');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// Force IPv4 resolution globally to prevent Railway ENETUNREACH errors with Gmail IPv6
+const dns = require('dns');
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
 // In-memory store for OTPs (In production, use Redis or DB, but memory is fine for a single admin)
 const otpStore = new Map();
 
@@ -14,16 +20,13 @@ const getTransporter = () => {
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
-    family: 4, // Force IPv4 to avoid Railway ENETUNREACH
     auth: {
       user: process.env.ADMIN_EMAIL,
       pass: process.env.ADMIN_APP_PASSWORD,
     },
     tls: {
       rejectUnauthorized: false
-    },
-    connectionTimeout: 10000,
-    socketTimeout: 10000,
+    }
   });
 };
 
