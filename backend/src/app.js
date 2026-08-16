@@ -13,6 +13,7 @@ const productRoutes = require("./routes/productRoutes");
 const videoRoutes = require("./routes/videoRoutes");
 const authRoutes = require("./routes/authRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const appVersionRoutes = require("./routes/appVersionRoutes");
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/video", videoRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/app-version", appVersionRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

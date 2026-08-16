@@ -44,6 +44,31 @@ pool.getConnection()
     } catch (e) {
       console.error("Failed to create product_related_groups table:", e.message);
     }
+    
+    // Add app_version table for OTA/APK updates management
+    try {
+      await c.query(`
+        CREATE TABLE IF NOT EXISTS app_version (
+          id INT PRIMARY KEY DEFAULT 1,
+          latest_version VARCHAR(50) NOT NULL DEFAULT '1.0.0',
+          download_url TEXT NOT NULL,
+          force_update BOOLEAN DEFAULT TRUE,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // Initialize with default values if empty
+      const [rows] = await c.query('SELECT COUNT(*) as count FROM app_version');
+      if (rows[0].count === 0) {
+        await c.query(`
+          INSERT INTO app_version (id, latest_version, download_url, force_update) 
+          VALUES (1, '1.0.0', 'https://expo.dev/', true)
+        `);
+      }
+    } catch (e) {
+      console.error("Failed to create app_version table:", e.message);
+    }
+
     c.release(); 
   })
   .catch((e) => { console.error("❌ MySQL connection failed:", e.message); process.exit(1); });
