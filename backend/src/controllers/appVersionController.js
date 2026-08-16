@@ -11,11 +11,16 @@ const getTransporter = () => {
     throw new Error('Email configuration is missing in .env');
   }
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.ADMIN_EMAIL,
       pass: process.env.ADMIN_APP_PASSWORD,
     },
+    tls: {
+      rejectUnauthorized: false
+    }
   });
 };
 
