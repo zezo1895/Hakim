@@ -17,15 +17,15 @@ const getTransporter = () => {
     throw new Error('Email configuration is missing in .env');
   }
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: '74.125.206.109', // Hardcoded IPv4 for smtp.gmail.com to bypass Railway IPv6 issues
     port: 465,
     secure: true,
+    tls: {
+      servername: 'smtp.gmail.com', // Required for SSL certificate validation against the IP
+    },
     auth: {
       user: process.env.ADMIN_EMAIL,
       pass: process.env.ADMIN_APP_PASSWORD,
-    },
-    tls: {
-      rejectUnauthorized: false
     }
   });
 };
