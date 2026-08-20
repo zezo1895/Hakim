@@ -60,6 +60,12 @@ const apiFetch = (path, opts = {}) => {
       ...opts.headers,
       ...(token ? { "Authorization": `Bearer ${token}` } : {}),
     },
+  }).then(res => {
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem(ADMIN_AUTH_KEY);
+      window.location.reload();
+    }
+    return res;
   });
 };
 
