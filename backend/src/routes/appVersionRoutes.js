@@ -14,4 +14,7 @@ router.post('/confirm-update', appVersionController.confirmUpdate);
 // POST /api/app-version/ci-update (For GitHub Actions)
 router.post('/ci-update', appVersionController.ciUpdate);
 
+// POST /api/app-version/log-error (For mobile app debugging)
+router.post('/log-error', appVersionController.logError);
+
 module.exports = router;

@@ -171,3 +171,11 @@ exports.ciUpdate = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+exports.logError = (req, res) => {
+  console.error('=========================================');
+  console.error('📱 MOBILE APP ERROR LOG:', req.body);
+  console.error('=========================================');
+  res.json({ success: true });
+};
+
