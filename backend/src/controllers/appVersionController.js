@@ -142,3 +142,32 @@ exports.confirmUpdate = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+exports.ciUpdate = async (req, res) => {
+  try {
+    const ciSecret = req.headers['x-ci-secret'];
+    if (ciSecret !== 'hakim_ci_super_secret_999') {
+      return res.status(401).json({ error: 'Unauthorized CI' });
+    }
+
+    const { downloadUrl, version } = req.body;
+    if (!downloadUrl || !version) {
+      return res.status(400).json({ error: 'downloadUrl and version are required' });
+    }
+
+    await db.query(
+      'UPDATE app_version SET latest_version = ?, download_url = ? WHERE id = 1',
+      [version, downloadUrl]
+    );
+
+    res.json({ 
+      message: 'App version updated successfully via CI',
+      newVersion: version,
+      downloadUrl: downloadUrl
+    });
+
+  } catch (error) {
+    console.error('Error in CI update:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
