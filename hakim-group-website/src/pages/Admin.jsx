@@ -904,11 +904,28 @@ function ImageUploader({
   onRemoveExisting,
 }) {
   const ref = useRef();
+  const [draggedIdx, setDraggedIdx] = useState(null);
+
   const add = (files) => {
     const valid = Array.from(files).filter(
       (f) => f.type.startsWith("image/") && f.size <= 8 * 1024 * 1024,
     );
     onNewFiles((p) => [...p, ...valid]);
+  };
+
+  const handleDragStart = (i) => setDraggedIdx(i);
+
+  const handleDragOver = (e, i) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === i) return;
+
+    const newFilesList = [...newFiles];
+    const draggedFile = newFilesList[draggedIdx];
+    newFilesList.splice(draggedIdx, 1);
+    newFilesList.splice(i, 0, draggedFile);
+
+    onNewFiles(newFilesList);
+    setDraggedIdx(i);
   };
 
   return (
@@ -925,7 +942,7 @@ function ImageUploader({
                   e.target.src =
                     "data:image/svg+xml;utf8," +
                     encodeURIComponent(
-                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">لا صورة</text></svg>',
+                      '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#f3f4f6"/><text x="50" y="50" font-size="12" fill="#9ca3af" text-anchor="middle" dy=".3em">بدون صورة</text></svg>',
                     );
                 }}
               />
@@ -958,10 +975,10 @@ function ImageUploader({
         />
         <p className="text-sm text-gray-500">
           اسحب الصور هنا أو{" "}
-          <span className="text-brand-blue font-bold">اختر من جهازك</span>
+          <span className="text-brand-blue font-bold">اضغط من جهازك</span>
         </p>
         <p className="text-xs text-gray-400 mt-1">
-          JPG · PNG · WEBP · حجم أقصى 5MB
+          JPG أو PNG أو WEBP بحد أقصى 8MB
         </p>
         <input
           ref={ref}
@@ -976,10 +993,17 @@ function ImageUploader({
       {newFiles.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {newFiles.map((f, i) => (
-            <div key={i} className="relative group w-20 h-20">
+            <div
+              key={i}
+              draggable
+              onDragStart={() => handleDragStart(i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDragEnd={() => setDraggedIdx(null)}
+              className="relative group w-20 h-20 cursor-move"
+            >
               <img
                 src={URL.createObjectURL(f)}
-                className="w-full h-full object-cover rounded-xl border-2 border-brand-blue/30"
+                className={`w-full h-full object-cover rounded-xl border-2 ${draggedIdx === i ? 'border-dashed border-brand-blue opacity-50' : 'border-brand-blue/30'}`}
               />
               <button
                 type="button"
