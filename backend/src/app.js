@@ -26,15 +26,6 @@ app.use(helmet({
 }));
 
 // نظام الحماية من الـ Spam (Rate Limiting)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 300, // أقصى حد 300 طلب لكل IP خلال الـ 15 دقيقة
-  message: { error: "طلبات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use(limiter);
-
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
   .map((origin) => origin.trim())
@@ -82,6 +73,16 @@ app.use(
     ],
   })
 );
+
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 دقيقة
+  max: 300, // أقصى حد 300 طلب لكل IP خلال الـ 15 دقيقة
+  message: { error: "طلبات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
