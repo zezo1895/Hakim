@@ -36,6 +36,8 @@ router.get("/",                    ctrl.getAll);
 router.get("/manual-lids",         adminAuth, ctrl.getManualLids);
 router.delete("/manual-lids/:id",  adminAuth, ctrl.deleteManualLid);
 
+router.get("/cleanup-last-images", adminAuth, ctrl.cleanupLastImages);
+
 router.get("/analytics",           adminAuth, ctrl.getAnalytics);
 router.post("/analytics/search",   ctrl.logSearch);
 router.post("/:id/view",           ctrl.incrementViews);
