@@ -132,6 +132,19 @@ exports.update = async (req, res) => {
         await model.addImage(id, req.files[i].path, req.files[i].filename, existing.length + i);
     }
 
+    const { existing_image_order } = req.body;
+    if (existing_image_order) {
+      try {
+        const orderIds = JSON.parse(existing_image_order);
+        const db = require("../config/db");
+        for (let i = 0; i < orderIds.length; i++) {
+          await db.query('UPDATE product_images SET sort_order = ? WHERE id = ?', [i, orderIds[i]]);
+        }
+      } catch (e) {
+        console.error("Error updating image order:", e);
+      }
+    }
+
     await model.setLids(id, parsedLids);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }

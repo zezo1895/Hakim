@@ -901,10 +901,12 @@ function ImageUploader({
   newFiles,
   onNewFiles,
   existingImgs,
+  onExistingImgs,
   onRemoveExisting,
 }) {
   const ref = useRef();
   const [draggedIdx, setDraggedIdx] = useState(null);
+  const [draggedExIdx, setDraggedExIdx] = useState(null);
 
   const add = (files) => {
     const valid = Array.from(files).filter(
@@ -928,15 +930,37 @@ function ImageUploader({
     setDraggedIdx(i);
   };
 
+  const handleExDragStart = (i) => setDraggedExIdx(i);
+
+  const handleExDragOver = (e, i) => {
+    e.preventDefault();
+    if (draggedExIdx === null || draggedExIdx === i) return;
+
+    const exList = [...existingImgs];
+    const draggedImg = exList[draggedExIdx];
+    exList.splice(draggedExIdx, 1);
+    exList.splice(i, 0, draggedImg);
+
+    if (onExistingImgs) onExistingImgs(exList);
+    setDraggedExIdx(i);
+  };
+
   return (
     <div className="space-y-3">
       {existingImgs.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {existingImgs.map((img) => (
-            <div key={img.id} className="relative group w-20 h-20">
+          {existingImgs.map((img, i) => (
+            <div
+              key={img.id}
+              draggable
+              onDragStart={() => handleExDragStart(i)}
+              onDragOver={(e) => handleExDragOver(e, i)}
+              onDragEnd={() => setDraggedExIdx(null)}
+              className="relative group w-20 h-20 cursor-move"
+            >
               <img
                 src={img.url}
-                className="w-full h-full object-cover rounded-xl border-2 border-gray-200"
+                className={`w-full h-full object-cover rounded-xl border-2 ${draggedExIdx === i ? 'border-dashed border-gray-400 opacity-50' : 'border-gray-200'}`}
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src =
@@ -1225,6 +1249,9 @@ function ProductFormModal({
 
       if (removeIds.length)
         fd.append("remove_image_ids", JSON.stringify(removeIds));
+      if (existingImgs && existingImgs.length > 0 && editProduct) {
+        fd.append("existing_image_order", JSON.stringify(existingImgs.map(i => i.id)));
+      }
       newFiles.forEach((f) => fd.append("images", f));
       if (prefillData?.manualLidId) {
         fd.append("convert_manual_lid_id", prefillData.manualLidId);
@@ -1485,6 +1512,7 @@ function ProductFormModal({
               newFiles={newFiles}
               onNewFiles={setNewFiles}
               existingImgs={existingImgs}
+              onExistingImgs={setExistingImgs}
               onRemoveExisting={(id) => {
                 setRemoveIds((r) => [...r, id]);
                 setExistingImgs((imgs) => imgs.filter((i) => i.id !== id));
