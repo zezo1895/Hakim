@@ -4,6 +4,7 @@ import TVShowcase from "../pages/TVShowcase";
 import TVGate, { grantTVAccess } from "../components/TVGate";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductDetail from "./ProductDetail";
+import BulkImageEditor from "./BulkImageEditor";
 import AnalyticsModal from "../components/AnalyticsModal";
 import AISettingsModal from "../components/AISettingsModal";
 import {
@@ -1939,6 +1940,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showBulkImageEditor, setShowBulkImageEditor] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [deleteManualLidConfirm, setDeleteManualLidConfirm] = useState(null);
@@ -2363,6 +2365,13 @@ export default function Admin() {
             >
               <Bot size={15} />
               إعدادات الذكاء الاصطناعي
+            </button>
+            <button
+              onClick={() => setShowBulkImageEditor(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-full hover:opacity-90 transition"
+            >
+              <Upload size={16} />
+              تعديل صور جماعي
             </button>
             <button
               onClick={() => {
@@ -3067,6 +3076,15 @@ export default function Admin() {
         <AISettingsModal
           authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
           onClose={() => setShowAISettings(false)}
+        />
+      )}
+      
+      {showBulkImageEditor && (
+        <BulkImageEditor
+          products={products}
+          onClose={() => setShowBulkImageEditor(false)}
+          onRefresh={loadData}
+          apiFetch={apiFetch}
         />
       )}
     </div>

@@ -150,6 +150,69 @@ exports.update = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
+exports.bulkImagesUpdate = async (req, res) => {
+  try {
+    const { remove_image_ids, orders } = req.body;
+    const db = require("../config/db");
+
+    // 1. Process deletions
+    if (remove_image_ids) {
+      const toRemove = JSON.parse(remove_image_ids);
+      for (const imgId of toRemove) {
+        const [imgs] = await db.query("SELECT public_id FROM product_images WHERE id=?", [imgId]);
+        if (imgs.length) {
+          await cloudinary.uploader.destroy(imgs[0].public_id).catch(() => {});
+          await model.deleteImage(imgId);
+        }
+      }
+    }
+
+    // 2. Group new files by product_id
+    const newFilesMap = {};
+    if (req.files && req.files.length) {
+      req.files.forEach(file => {
+         const match = file.fieldname.match(/^new_images_(.+)$/);
+         if (match) {
+           const pid = match[1];
+           if (!newFilesMap[pid]) newFilesMap[pid] = [];
+           newFilesMap[pid].push(file);
+         }
+      });
+    }
+
+    // 3. Process ordering and insert new images
+    if (orders) {
+      const parsedOrders = JSON.parse(orders);
+      
+      for (const productId of Object.keys(parsedOrders)) {
+        const items = parsedOrders[productId]; // array of strings (uuid or "file:X")
+        let sortIndex = 0;
+        let fileIndex = 0;
+        
+        for (const item of items) {
+           if (item.startsWith("file:")) {
+              const filesForProduct = newFilesMap[productId];
+              if (filesForProduct && filesForProduct[fileIndex]) {
+                 const file = filesForProduct[fileIndex];
+                 await model.addImage(productId, file.path, file.filename, sortIndex);
+                 fileIndex++;
+              }
+           } else {
+              // Existing image UUID
+              await db.query('UPDATE product_images SET sort_order = ? WHERE id = ?', [sortIndex, item]);
+           }
+           sortIndex++;
+        }
+      }
+    }
+
+    res.json({ success: true });
+  } catch(e) {
+    console.error("Bulk image update error:", e);
+    res.status(500).json({ error: e.message });
+  }
+};
+
 exports.remove = async (req, res) => {
   try {
     const productId = req.params.id;

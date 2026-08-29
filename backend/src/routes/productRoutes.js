@@ -40,6 +40,7 @@ router.get("/analytics",           adminAuth, ctrl.getAnalytics);
 router.post("/analytics/search",   ctrl.logSearch);
 router.post("/:id/view",           ctrl.incrementViews);
 
+router.post("/bulk-images",            adminAuth, upload.any(), ctrl.bulkImagesUpdate);
 router.get("/:id",                 ctrl.getOne);
 router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
 router.put("/:id/group",           adminAuth, ctrl.updateGroup);
