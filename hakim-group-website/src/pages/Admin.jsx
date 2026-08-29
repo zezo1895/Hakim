@@ -3083,7 +3083,7 @@ export default function Admin() {
         <BulkImageEditor
           products={products}
           onClose={() => setShowBulkImageEditor(false)}
-          onRefresh={loadData}
+          onRefresh={load}
           apiFetch={apiFetch}
         />
       )}
