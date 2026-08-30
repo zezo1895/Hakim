@@ -17,6 +17,10 @@ const pool = mysql.createPool({
   ...(useSSL ? { ssl: { rejectUnauthorized: false } } : {}),
 });
 
+pool.on('connection', function (connection) {
+  connection.query('SET SESSION group_concat_max_len = 1000000');
+});
+
 // Test connection on startup
 pool.getConnection()
   .then(async (c) => { 
