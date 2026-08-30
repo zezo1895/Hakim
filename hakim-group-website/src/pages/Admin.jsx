@@ -2193,7 +2193,12 @@ export default function Admin() {
       if (p.manual) return false;
       const type = types.find((t) => t.id === p.type_id);
       const isLid = type?.name === "غطاء";
-      return !p.group_id || !p.code || (isLid && (!p.related_groups || p.related_groups.length === 0));
+      
+      const missingCode = !p.code;
+      const missingGroupNormal = !isLid && !p.group_id;
+      const missingCupLid = isLid && !p.group_id && (!p.related_groups || p.related_groups.length === 0);
+      
+      return missingCode || missingGroupNormal || missingCupLid;
     });
   }, [products, types]);
 
@@ -2434,10 +2439,17 @@ export default function Admin() {
             <div className="flex flex-wrap gap-2">
               {problemProducts.map((p) => {
                  let reason = [];
-                 if (!p.group_id) reason.push("بدون مجموعة");
-                 if (!p.code) reason.push("بدون كود");
                  const type = types.find((t) => t.id === p.type_id);
-                 if (type?.name === "غطاء" && (!p.related_groups || p.related_groups.length === 0)) reason.push("بدون منتج مرتبط");
+                 const isLid = type?.name === "غطاء";
+                 
+                 if (!p.code) reason.push("بدون كود");
+                 if (isLid) {
+                     if (!p.group_id && (!p.related_groups || p.related_groups.length === 0)) {
+                         reason.push("بدون منتج مرتبط");
+                     }
+                 } else {
+                     if (!p.group_id) reason.push("بدون مجموعة");
+                 }
 
                  return (
                   <button 
