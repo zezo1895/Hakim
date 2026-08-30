@@ -2188,6 +2188,15 @@ export default function Admin() {
         return matchS && matchT && matchM && matchMCat && matchG;
       });
 
+  const problemProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (p.manual) return false;
+      const type = types.find((t) => t.id === p.type_id);
+      const isLid = type?.name === "غطاء";
+      return !p.group_id || !p.code || (isLid && (!p.related_groups || p.related_groups.length === 0));
+    });
+  }, [products, types]);
+
   // ── تحميل البيانات ──
   const load = useCallback(async () => {
     setLoading(true);
@@ -2406,6 +2415,48 @@ export default function Admin() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8 space-y-6">
         
+        {/* منتجات تحتاج استكمال */}
+        {problemProducts.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-6 shadow-sm mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle size={20} className="text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-red-800">
+                  منتجات تحتاج استكمال بيانات ({problemProducts.length})
+                </h3>
+                <p className="text-sm text-red-600/80 mt-0.5">
+                  منتجات ينقصها: مجموعة، كود، أو غطاء بدون منتج مرتبط.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {problemProducts.map((p) => {
+                 let reason = [];
+                 if (!p.group_id) reason.push("بدون مجموعة");
+                 if (!p.code) reason.push("بدون كود");
+                 const type = types.find((t) => t.id === p.type_id);
+                 if (type?.name === "غطاء" && (!p.related_groups || p.related_groups.length === 0)) reason.push("بدون منتج مرتبط");
+
+                 return (
+                  <button 
+                    key={p.id}
+                    onClick={() => {
+                      setEditTarget(p);
+                      setShowForm(true);
+                    }}
+                    className="flex items-center gap-2 bg-white border border-red-100 rounded-xl py-2 px-3 shadow-sm hover:border-red-300 hover:shadow-md transition text-right"
+                  >
+                    <span className="font-bold text-gray-700 text-sm">{p.name}</span>
+                    <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-md whitespace-nowrap">{reason.join(" + ")}</span>
+                  </button>
+                 );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* الأغطية اليدوية */}
         {manualLids.length > 0 && (
           <div className="bg-orange-50 border border-orange-200 rounded-3xl p-6 shadow-sm">
