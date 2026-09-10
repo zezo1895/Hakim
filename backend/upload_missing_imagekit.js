@@ -48,6 +48,14 @@ async function run() {
 
       const productId = products[0].id;
 
+      // Check if already uploaded
+      const [dbImages] = await db.query(`SELECT * FROM product_images WHERE product_id = ?`, [productId]);
+      if (dbImages.length >= files.length) {
+        console.log(`✔️ [${i+1}/${folders.length}] Product ${productCode}: Already has ${dbImages.length} images. Skipping.`);
+        skippedCount++;
+        continue;
+      }
+
       console.log(`🔄 [${i+1}/${folders.length}] Product ${productCode}: Uploading ${files.length} images...`);
 
       // 1. Delete ALL old images from DB (no need to delete from cloud - old URLs are dead anyway)

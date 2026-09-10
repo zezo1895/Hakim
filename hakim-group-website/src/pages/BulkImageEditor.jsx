@@ -94,6 +94,7 @@ export default function BulkImageEditor({ products, onClose, onRefresh, apiFetch
             orderArr.push(item.data.id);
           } else if (item.type === "new") {
             fd.append(`new_images_${pid}`, item.data);
+            fd.append(`code_${pid}`, products.find(p => p.id === pid)?.code || "general");
             orderArr.push(`file:${fileIndexCounter}`);
             fileIndexCounter++;
           }

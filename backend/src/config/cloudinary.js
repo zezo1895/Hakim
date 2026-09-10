@@ -23,11 +23,21 @@ const uploadToImageKit = async (req, res, next) => {
   if (!req.files || req.files.length === 0) return next();
 
   try {
-    const productCode = req.body.code ? req.body.code.trim() : 'general';
-    const safeCode = productCode.replace(/[^a-zA-Z0-9_-]/g, '_');
-    const folder = `hakim-group/products/${safeCode}`;
-
     const uploadPromises = req.files.map(async (file) => {
+      // For bulk uploads, fieldname is new_images_{pid}
+      // If we pass the product code in req.body[`code_${pid}`], we can use it.
+      let productCode = req.body.code ? req.body.code.trim() : 'general';
+      const match = file.fieldname.match(/^new_images_(.+)$/);
+      if (match) {
+         const pid = match[1];
+         if (req.body[`code_${pid}`]) {
+            productCode = req.body[`code_${pid}`].trim();
+         }
+      }
+      
+      const safeCode = productCode.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const folder = `hakim-group/products/${safeCode}`;
+
       const nameWithoutExt = file.originalname.split('.').slice(0, -1).join('.');
       const response = await imagekit.upload({
         file: file.buffer,
