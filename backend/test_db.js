@@ -5,7 +5,7 @@ const mysql = require('mysql2/promise');
     const db = await mysql.createPool({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
-      password: '1832003Ziadz',
+      password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME
     });
     console.log("DB connected");

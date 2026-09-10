@@ -234,9 +234,10 @@ exports.remove = async (req, res) => {
       await Promise.all(deletePromises);
     }
 
-    if (product.code) {
-      const folderPath = `hakim-group/products/${product.code.trim()}`;
-      console.log(`📂 Deleting empty folder: ${folderPath}`);
+      if (product.code) {
+        const safeCode = product.code.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
+        const folderPath = `hakim-group/products/${safeCode}`;
+        console.log(`dY", Deleting empty folder: ${folderPath}`);
       await cloudinary.api.delete_folder(folderPath).catch((err) => {
         console.log("ℹ️ Note: Folder deletion skipped or folder wasn't empty:", err.message);
       });
