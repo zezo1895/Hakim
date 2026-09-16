@@ -43,7 +43,7 @@ const uploadToImageKit = async (req, res, next) => {
         file: file.buffer,
         fileName: file.originalname,
         folder: folder,
-        useUniqueFileName: false
+        useUniqueFileName: true
       });
       
       // Mimic cloudinary fields for the controller
