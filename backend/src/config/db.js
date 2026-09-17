@@ -29,6 +29,9 @@ pool.getConnection()
       await c.query('ALTER TABLE products ADD COLUMN views_count INT DEFAULT 0');
     } catch (e) {}
     try {
+      await c.query('ALTER TABLE products ADD CONSTRAINT unique_code UNIQUE (code)');
+    } catch (e) {}
+    try {
       await c.query(`
         CREATE TABLE IF NOT EXISTS search_logs (
           id INT AUTO_INCREMENT PRIMARY KEY,

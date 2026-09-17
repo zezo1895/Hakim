@@ -82,7 +82,12 @@ exports.create = async (req, res) => {
     }
 
     res.status(201).json({ id: pid });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
+    }
+    res.status(500).json({ error: e.message }); 
+  }
 };
 
 // تحديث المجموعة بس — للاستخدام فى التعديل الجماعي (اختيار منتجات متعددة وتغيير مجموعتهم دفعة واحدة)
@@ -147,7 +152,12 @@ exports.update = async (req, res) => {
 
     await model.setLids(id, parsedLids);
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    if (e.code === 'ER_DUP_ENTRY') {
+      return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
+    }
+    res.status(500).json({ error: e.message }); 
+  }
 };
 
 exports.bulkImagesUpdate = async (req, res) => {

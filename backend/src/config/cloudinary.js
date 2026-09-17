@@ -39,9 +39,15 @@ const uploadToImageKit = async (req, res, next) => {
       const folder = `hakim-group/products/${safeCode}`;
 
       const nameWithoutExt = file.originalname.split('.').slice(0, -1).join('.');
+      const timestamp = Date.now();
+      const nameParts = file.originalname.split('.');
+      const ext = nameParts.length > 1 ? nameParts.pop() : '';
+      const baseName = nameParts.join('.');
+      const uniqueName = `${baseName}_${timestamp}.${ext}`;
+      
       const response = await imagekit.upload({
         file: file.buffer,
-        fileName: file.originalname,
+        fileName: uniqueName,
         folder: folder,
         useUniqueFileName: true
       });
