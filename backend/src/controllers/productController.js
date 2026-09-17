@@ -1,5 +1,6 @@
 const model          = require("../models/productModel");
 const { cloudinary } = require("../config/cloudinary");
+const { translateProduct } = require("../services/translationService");
 
 exports.search    = async (req, res) => {
   try {
@@ -60,6 +61,9 @@ exports.create = async (req, res) => {
     const { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids, convert_manual_lid_id } = req.body;
     if (!name) return res.status(400).json({ error: "name required" });
 
+    // Auto-translate using AI if needed
+    const { name_en, size_en, notes_en } = await translateProduct({ name, size, notes });
+
     let parsedLids = [];
     if (lid_ids) {
       try {
@@ -69,7 +73,7 @@ exports.create = async (req, res) => {
       }
     }
 
-    const pid = await model.create({ name, code, type_id, material_id, temp, group_id, size, notes });
+    const pid = await model.create({ name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en });
 
     if (req.files?.length)
       for (let i = 0; i < req.files.length; i++)
@@ -107,6 +111,8 @@ exports.update = async (req, res) => {
     const { name, code, type_id, material_id, temp, group_id, size, notes,
             lid_ids, convert_manual_lid_id, related_groups, remove_image_ids } = req.body;
 
+    const { name_en, size_en, notes_en } = await translateProduct({ name, size, notes });
+
     let parsedLids = [];
     if (lid_ids) {
       try {
@@ -116,7 +122,7 @@ exports.update = async (req, res) => {
       }
     }
 
-    await model.update(id, { name, code, type_id, material_id, temp, group_id, size, notes, related_groups });
+    await model.update(id, { name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, related_groups });
 
     if (remove_image_ids) {
       const toRemove = JSON.parse(remove_image_ids);

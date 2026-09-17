@@ -58,7 +58,7 @@ exports.getAllLidsMap = async () => {
   // الأغطية العادية (منتجات من نوع غطاء)
   const [regularLids] = await db.query(`
     SELECT pl.product_id,
-           p.id, p.name, p.code, p.size,
+           p.id, p.name, p.name_en, p.code, p.size, p.size_en,
            m.name AS material_name, mc.name AS material_category,
            GROUP_CONCAT(DISTINCT CONCAT(pi.id,'::',pi.url,'::',pi.public_id) ORDER BY pi.sort_order SEPARATOR '||') AS raw_images,
            MIN(pi.url) AS thumbnail
@@ -115,7 +115,7 @@ exports.getById = async (id) => {
   if (product) {
     // جلب الأغطية العادية (منتجات من نوع غطاء)
     const [lids] = await db.query(`
-      SELECT p.id, p.name, p.code, p.size,
+      SELECT p.id, p.name, p.name_en, p.code, p.size, p.size_en,
              m.name AS material_name, mc.name AS material_category,
              MIN(pi.url) AS thumbnail
       FROM product_lids pl
@@ -161,7 +161,7 @@ exports.getSiblings = (groupIds, excludeId) => {
   if (!groupIds || !groupIds.length) return Promise.resolve([[]]);
   const ids = groupIds.map(id => db.escape(id)).join(',');
   return db.query(`
-    SELECT p.id, p.name, p.code, p.size, MIN(pi.url) AS thumbnail
+    SELECT p.id, p.name, p.name_en, p.code, p.size, p.size_en, MIN(pi.url) AS thumbnail
     FROM products p
     LEFT JOIN product_images pi ON pi.product_id = p.id
     WHERE (p.group_id IN (${ids}) OR EXISTS (SELECT 1 FROM product_related_groups prg WHERE prg.product_id = p.id AND prg.group_id IN (${ids}))) 
@@ -252,10 +252,10 @@ exports.create = async (d) => {
 
   const id = crypto.randomUUID();
   await db.query(
-    `INSERT INTO products (id, name, code, type_id, material_id, temp, group_id, size, notes, sort_order)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    [id, d.name, d.code||null, d.type_id||null, d.material_id||null,
-     d.temp, d.group_id||null, d.size||null, d.notes||null, insertOrder]
+    `INSERT INTO products (id, name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, sort_order)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, d.name, d.name_en||null, d.code||null, d.type_id||null, d.material_id||null,
+     d.temp, d.group_id||null, d.size||null, d.size_en||null, d.notes||null, d.notes_en||null, insertOrder]
   );
 
   if (d.related_groups) {
@@ -282,10 +282,10 @@ exports.reorder = async (orderedIds) => {
 
 exports.update = async (id, d) => {
   await db.query(
-    `UPDATE products SET name=?,code=?,type_id=?,material_id=?,temp=?,
-     group_id=?,size=?,notes=? WHERE id=?`,
-    [d.name, d.code||null, d.type_id||null, d.material_id||null,
-     d.temp, d.group_id||null, d.size||null, d.notes||null, id]
+    `UPDATE products SET name=?, name_en=?, code=?, type_id=?, material_id=?, temp=?,
+     group_id=?, size=?, size_en=?, notes=?, notes_en=? WHERE id=?`,
+    [d.name, d.name_en||null, d.code||null, d.type_id||null, d.material_id||null,
+     d.temp, d.group_id||null, d.size||null, d.size_en||null, d.notes||null, d.notes_en||null, id]
   );
 
   if (d.related_groups !== undefined) {
