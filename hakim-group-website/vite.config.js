@@ -15,6 +15,7 @@ export default defineConfig({
         theme_color: '#1b7a3d',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/products',
         icons: [
           {
             src: 'pwa-192x192.png',
