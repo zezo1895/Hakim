@@ -113,15 +113,6 @@ exports.update = async (req, res) => {
 
     const { name_en, size_en, notes_en } = await translateProduct({ name, size, notes });
 
-    let parsedLids = [];
-    if (lid_ids) {
-      try {
-        parsedLids = JSON.parse(lid_ids);
-      } catch (e) {
-        parsedLids = [];
-      }
-    }
-
     await model.update(id, { name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, related_groups });
 
     if (remove_image_ids) {
@@ -156,7 +147,15 @@ exports.update = async (req, res) => {
       }
     }
 
-    await model.setLids(id, parsedLids);
+    if (lid_ids !== undefined) {
+      let parsedLids = [];
+      try {
+        parsedLids = typeof lid_ids === 'string' ? JSON.parse(lid_ids) : (Array.isArray(lid_ids) ? lid_ids : []);
+      } catch (e) {
+        parsedLids = [];
+      }
+      await model.setLids(id, parsedLids);
+    }
     res.json({ success: true });
   } catch (e) {
     if (e.code === 'ER_DUP_ENTRY') {

@@ -373,11 +373,12 @@ exports.convertManualLidToRealLid = async (manualLidId, newRealLidId) => {
   await db.query("DELETE FROM manual_lids WHERE id = ?", [manualLidId]);
 };
 
-exports.setLids = async (productId, lidData = []) => {
+exports.setLids = async (productId, lidData) => {
+  if (lidData === undefined) return;
   await db.query("DELETE FROM product_lids WHERE product_id=?", [productId]);
   await db.query("DELETE FROM product_manual_lids WHERE product_id=?", [productId]);
   
-  if (!lidData.length) return;
+  if (!Array.isArray(lidData) || !lidData.length) return;
   
   const existingLids = lidData.filter(l => !l.manual);
   const manualLids = lidData.filter(l => l.manual);

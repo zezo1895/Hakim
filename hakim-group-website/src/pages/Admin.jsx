@@ -2454,10 +2454,7 @@ export default function Admin() {
                  return (
                   <button 
                     key={p.id}
-                    onClick={() => {
-                      setEditTarget(p);
-                      setShowForm(true);
-                    }}
+                    onClick={() => openEdit(p)}
                     className="flex items-center gap-2 bg-white border border-red-100 rounded-xl py-2 px-3 shadow-sm hover:border-red-300 hover:shadow-md transition text-right"
                   >
                     <span className="font-bold text-gray-700 text-sm">{p.name}</span>
