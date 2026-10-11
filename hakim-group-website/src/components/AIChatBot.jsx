@@ -20,9 +20,10 @@ export default function AIChatBot() {
   useEffect(() => {
     const fetchWelcome = async () => {
       try {
-        const res = await fetch(`${API}/ai/settings`);
-        if (res.ok) {
-          const data = await res.json();
+        const res = await fetch(`${API}/ai/welcome`).catch(() => null);
+        const activeRes = (res && res.ok) ? res : await fetch(`${API}/ai/settings`);
+        if (activeRes && activeRes.ok) {
+          const data = await activeRes.json();
           if (data.welcome_message) {
             setMessages([{ role: "model", text: data.welcome_message }]);
           }
@@ -44,7 +45,7 @@ export default function AIChatBot() {
     e?.preventDefault();
     if (!input.trim() || loading) return;
 
-    const userText = input.trim();
+    const userText = input.trim().slice(0, 500);
     setInput("");
     
     // Optimistic UI update
@@ -63,7 +64,8 @@ export default function AIChatBot() {
       });
 
       if (!response.ok) {
-        throw new Error("Network response was not ok");
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || "Network response was not ok");
       }
 
       const data = await response.json();
@@ -71,9 +73,12 @@ export default function AIChatBot() {
       setMessages(prev => [...prev, { role: "model", text: data.text }]);
     } catch (error) {
       console.error("AI Error:", error);
+      const userFriendlyMsg = error?.message && error.message !== "Network response was not ok"
+        ? error.message
+        : "عفواً، واجهت مشكلة في الاتصال بالنظام. يرجى المحاولة مرة أخرى أو التواصل معنا عبر الواتساب.";
       setMessages(prev => [...prev, { 
         role: "model", 
-        text: "عفواً، واجهت مشكلة في الاتصال بالنظام. يرجى المحاولة مرة أخرى أو التواصل معنا عبر الواتساب." 
+        text: userFriendlyMsg 
       }]);
     } finally {
       setLoading(false);
@@ -178,6 +183,7 @@ export default function AIChatBot() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="اسأل عن أي منتج أو خامة..."
+                  maxLength={500}
                   className="flex-1 bg-gray-50 border border-gray-200 rounded-full py-3 px-5 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
                   disabled={loading}
                 />
