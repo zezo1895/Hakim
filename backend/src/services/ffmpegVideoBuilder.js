@@ -238,7 +238,8 @@ async function buildImageClip(
   outPath,
   variantSeed = 0,
 ) {
-  const kb = KEN_BURNS[Math.abs(variantSeed) % KEN_BURNS.length];
+  const seedNum = (typeof variantSeed === 'number' && !isNaN(variantSeed)) ? Math.abs(Math.floor(variantSeed)) : 0;
+  const kb = KEN_BURNS[seedNum % KEN_BURNS.length] || KEN_BURNS[0];
   const frames = Math.round(durationSec * FPS);
   const zoomStep = (kb.to - kb.from) / frames;
   const zoomExpr =
@@ -689,7 +690,8 @@ async function generateShowcaseVideo({
   };
 
   try {
-    for (const product of products) {
+    for (let pIdx = 0; pIdx < products.length; pIdx++) {
+      const product = products[pIdx];
       const imageUrls = (product.images?.length ? product.images : [null]).map(
         (i) => (typeof i === "string" ? i : i?.url),
       );
@@ -723,7 +725,7 @@ async function generateShowcaseVideo({
           imageOverlayPath,
           imgDur,
           clipPath,
-          Number(product.id) + i,
+          (pIdx * 7 + i),
         );
         clips.push({ path: clipPath, duration: imgDur });
         bump();

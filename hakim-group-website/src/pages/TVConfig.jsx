@@ -185,10 +185,13 @@ export default function TVConfig() {
     };
 
     try {
-      // 1) نبدأ عملية التوليد — الباك إند بيرجع jobId فورًا من غير ما يستنى الرندر يخلص
+      const adminToken = localStorage.getItem("hakim_admin_token");
       const startRes = await fetch(`${API}/video/render`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(adminToken ? { "Authorization": `Bearer ${adminToken}` } : {})
+        },
         body: JSON.stringify(payload),
       });
       const startData = await startRes.json();

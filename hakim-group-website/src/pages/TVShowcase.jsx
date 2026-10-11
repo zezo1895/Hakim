@@ -49,9 +49,21 @@ const KEN_BURNS_VARIANTS = [
   { from: 1,    to: 1.12, origin: "60% 55%" },  // زوم للداخل هادئ ومتوسط
 ];
 
+function hashString(str) {
+  if (!str) return 0;
+  let hash = 0;
+  const s = String(str);
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) - hash) + s.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
 function pickKenBurns(seed) {
-  const i = Math.abs(seed) % KEN_BURNS_VARIANTS.length;
-  return KEN_BURNS_VARIANTS[i];
+  const num = typeof seed === "number" && !isNaN(seed) ? Math.abs(Math.floor(seed)) : hashString(seed);
+  const i = num % KEN_BURNS_VARIANTS.length;
+  return KEN_BURNS_VARIANTS[i] || KEN_BURNS_VARIANTS[0];
 }
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -184,9 +196,9 @@ function SpecRow({ icon: Icon, label, value, delay, accent = "text-brand-blue", 
 // شاشة الصور المتتابعة للمنتج (المرحلة الأولى)
 // ────────────────────────────────────────────────────────────────
 function ImagesPhase({ product, images, imageIndex, cfg }) {
-  const temp = tempInfo(product.temp);
-  // كل صورة بتاخد نفسها تنويعة زوم مختلفة عن اللي قبلها، بناءً على المنتج ورقم الصورة
-  const kb = pickKenBurns((product.id || 0) * 7 + imageIndex * 3);
+  if (!product || !images || !images.length) return null;
+  const temp = tempInfo(product?.temp);
+  const kb = pickKenBurns(hashString(product?.id) + (imageIndex || 0) * 3);
   return (
     <div className="w-full h-full flex flex-col items-center justify-center px-24">
       <div className="relative w-[62vw] h-[58vh] flex items-center justify-center">
@@ -194,7 +206,7 @@ function ImagesPhase({ product, images, imageIndex, cfg }) {
           <motion.img
             key={imageIndex}
             src={images[imageIndex]}
-            alt={product.name}
+            alt={product?.name || ""}
             initial={{ opacity: 0, scale: kb.from }}
             animate={{ opacity: 1, scale: kb.to }}
             exit={{ opacity: 0 }}
@@ -256,8 +268,9 @@ function ImagesPhase({ product, images, imageIndex, cfg }) {
 // شاشة التفاصيل الكاملة (المرحلة الثانية) — الصورة المجمعة + كل بيانات الداتابيز
 // ────────────────────────────────────────────────────────────────
 function DetailPhase({ product, images }) {
-  const temp = tempInfo(product.temp);
-  const hasLids = Array.isArray(product.lids) && product.lids.length > 0;
+  if (!product) return null;
+  const temp = tempInfo(product?.temp);
+  const hasLids = Array.isArray(product?.lids) && product.lids.length > 0;
   const lidNames = hasLids
     ? product.lids.map((l) => l.name).filter(Boolean)
     : [];
@@ -413,7 +426,7 @@ function FinishedScreen({ willLoop }) {
 // ────────────────────────────────────────────────────────────────
 // المكوّن الرئيسي
 // ────────────────────────────────────────────────────────────────
-export default function TVShowcase({ 
+function TVShowcaseInner({ 
   products: propProducts, 
   isRemotion = false,
   imgDur: propImgDur,
@@ -701,5 +714,40 @@ export default function TVShowcase({
         </div>
       )}
     </div>
+  );
+}
+
+class TVErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error, info) {
+    console.error("TV Showcase encountered an error:", error, info);
+    setTimeout(() => {
+      window.location.reload();
+    }, 4000);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-screen h-screen flex flex-col items-center justify-center bg-white text-gray-700">
+          <p className="text-xl font-bold mb-2">جاري استعادة شاشة العرض تلقائياً...</p>
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-brand-blue rounded-full animate-spin" />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function TVShowcase(props) {
+  return (
+    <TVErrorBoundary>
+      <TVShowcaseInner {...props} />
+    </TVErrorBoundary>
   );
 }
