@@ -1,26 +1,18 @@
+const crypto = require('crypto');
 const db = require('../config/db');
 require('dotenv').config();
 
+// Helper for timing-safe string comparison
+const safeCompare = (a, b) => {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
 // In-memory store for OTPs
 const otpStore = new Map();
-
-const GAS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbxN8O_8bb3yqfY-TyOkiC82b4_CAhlT0jl07X7nXF5CUvO1_Jq4JvnyWveNFWOC5MKk/exec';
-
-// Helper to send email via Google Apps Script Webhook
-const sendEmail = async (subject, body) => {
-  const response = await fetch(GAS_WEBHOOK_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ subject, body }),
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to send email via Webhook');
-  }
-  return await response.json();
-};
 
 exports.getAppVersion = async (req, res) => {
   try {
@@ -44,45 +36,53 @@ exports.requestUpdate = async (req, res) => {
   try {
     // Validate admin secret
     const adminSecret = req.headers['x-admin-secret'];
-    if (adminSecret !== '123456') { // Used in Hakim App currently
+    const expectedSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret || !expectedSecret || !safeCompare(adminSecret, expectedSecret)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { downloadUrl } = req.body;
+    const { downloadUrl, version } = req.body;
     if (!downloadUrl) {
       return res.status(400).json({ error: 'downloadUrl is required' });
     }
 
-    // Generate 6 digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    const isAllowedDomain = typeof downloadUrl === 'string' && (
+      downloadUrl.startsWith('https://github.com/zezo1895/') ||
+      downloadUrl.startsWith('https://expo.dev/')
+    );
+    if (!isAllowedDomain) {
+      return res.status(400).json({ error: 'Untrusted download URL domain' });
+    }
 
-    otpStore.set('admin_update', { otp, expiry, downloadUrl });
+    let targetVersion = version;
+    if (!targetVersion) {
+      const [rows] = await db.query('SELECT latest_version FROM app_version WHERE id = 1');
+      if (rows.length > 0) {
+        const parts = rows[0].latest_version.split('.');
+        if (parts.length === 3) {
+          targetVersion = `${parts[0]}.${parts[1]}.${parseInt(parts[2], 10) + 1}`;
+        }
+      }
+      targetVersion = targetVersion || '1.0.1';
+    }
 
-    await sendEmail(
-      'Hakim App - Update OTP Code',
-      `
-        <div style="font-family: Arial, sans-serif; padding: 20px; direction: rtl; text-align: right;">
-          <h2>طلب تحديث التطبيق</h2>
-          <p>لقد تم طلب تحديث تطبيق حكيم جروب بالرابط الجديد.</p>
-          <p>كود التحقق الخاص بك هو:</p>
-          <h1 style="color: #1B7A3D; letter-spacing: 5px;">${otp}</h1>
-          <p>هذا الكود صالح لمدة 10 دقائق فقط.</p>
-        </div>
-      `
+    await db.query(
+      'UPDATE app_version SET latest_version = ?, download_url = ? WHERE id = 1',
+      [targetVersion, downloadUrl]
     );
 
-    res.json({ message: 'OTP sent successfully to your email.' });
+    res.json({ message: 'App version updated successfully', newVersion: targetVersion, downloadUrl });
   } catch (error) {
     console.error('Error requesting update:', error);
-    res.status(500).json({ error: error.message || 'Failed to send OTP' });
+    res.status(500).json({ error: error.message || 'Failed to update version' });
   }
 };
 
 exports.confirmUpdate = async (req, res) => {
   try {
     const adminSecret = req.headers['x-admin-secret'];
-    if (adminSecret !== '123456') {
+    const expectedSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret || !expectedSecret || !safeCompare(adminSecret, expectedSecret)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -145,14 +145,24 @@ exports.confirmUpdate = async (req, res) => {
 
 exports.ciUpdate = async (req, res) => {
   try {
-    const ciSecret = req.headers['x-ci-secret'];
-    if (ciSecret !== 'hakim_ci_super_secret_999') {
+    const secret = req.headers['x-admin-secret'] || req.headers['x-ci-secret'];
+    const expectedSecret = process.env.ADMIN_SECRET || process.env.CI_SECRET;
+    if (!secret || !expectedSecret || !safeCompare(secret, expectedSecret)) {
       return res.status(401).json({ error: 'Unauthorized CI' });
     }
 
     const { downloadUrl, version } = req.body;
     if (!downloadUrl || !version) {
       return res.status(400).json({ error: 'downloadUrl and version are required' });
+    }
+
+    // Security check: Only allow APK downloads from official trusted sources
+    const isAllowedDomain = typeof downloadUrl === 'string' && (
+      downloadUrl.startsWith('https://github.com/zezo1895/') ||
+      downloadUrl.startsWith('https://expo.dev/')
+    );
+    if (!isAllowedDomain) {
+      return res.status(400).json({ error: 'Untrusted download URL domain' });
     }
 
     await db.query(
