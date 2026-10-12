@@ -12,7 +12,7 @@
 //   /tv?groups=3&imgDur=3&detailDur=8
 // ============================================================================
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import React, { Component, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
@@ -717,7 +717,7 @@ function TVShowcaseInner({
   );
 }
 
-class TVErrorBoundary extends React.Component {
+class TVErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
