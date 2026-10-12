@@ -4,6 +4,13 @@ require("dotenv").config();
 // معظم خدمات استضافة MySQL الخارجية (Aiven, Railway, PlanetScale, ...)
 // بتطلب اتصال مشفّر بـ SSL. لو DB_SSL=true في الـ env هنفعّله تلقائيًا.
 const useSSL = process.env.DB_SSL === "true";
+const sslConfig = useSSL
+  ? {
+      ssl: process.env.DB_CA_CERT
+        ? { ca: process.env.DB_CA_CERT, rejectUnauthorized: true }
+        : { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true" },
+    }
+  : {};
 
 const pool = mysql.createPool({
   host:             process.env.DB_HOST,
@@ -14,7 +21,7 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit:  10,
   timezone:         "+00:00",
-  ...(useSSL ? { ssl: { rejectUnauthorized: false } } : {}),
+  ...sslConfig,
 });
 
 pool.on('connection', function (connection) {

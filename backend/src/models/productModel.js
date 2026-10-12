@@ -221,37 +221,28 @@ exports.searchLids = async (q) => {
 };
 
 // ── Write ──────────────────────────────────────────────────
-exports.create = async (d) => {
+exports.create = async (d, conn = db) => {
   let insertOrder = null;
 
-  // لو المنتج تابع لمجموعة، حطه فورًا بعد آخر منتج في نفس المجموعة
-  // (مش آخر رقم فى الجدول كله) — عشان يفضل جنب مجموعته من غير الحاجة
-  // لعمل "إعادة ترتيب" يدوي بعد كل إضافة
   if (d.group_id) {
-    const [[row] = []] = await db.query(
+    const [[row] = []] = await conn.query(
       "SELECT MAX(sort_order) AS maxInGroup FROM products WHERE group_id = ?",
       [d.group_id]
     );
     if (row && row.maxInGroup != null) {
       insertOrder = row.maxInGroup + 1;
-      // فسح مكان للمنتج الجديد: زحزحة كل اللي بعده رقم واحد لقدام
-      await db.query(
-        "UPDATE products SET sort_order = sort_order + 1 WHERE sort_order >= ?",
-        [insertOrder]
-      );
     }
   }
 
-  // مفيش مجموعة، أو المجموعة دي لسه مفيهاش منتجات — يتحط آخر الترتيب العام
   if (insertOrder == null) {
-    const [[{ maxOrder } = { maxOrder: 0 }]] = await db.query(
+    const [[{ maxOrder } = { maxOrder: 0 }]] = await conn.query(
       "SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM products"
     );
-    insertOrder = maxOrder + 1;
+    insertOrder = (maxOrder || 0) + 1;
   }
 
   const id = crypto.randomUUID();
-  await db.query(
+  await conn.query(
     `INSERT INTO products (id, name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, sort_order)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, d.name, d.name_en||null, d.code||null, d.type_id||null, d.material_id||null,
@@ -263,7 +254,7 @@ exports.create = async (d) => {
     try { groups = typeof d.related_groups === 'string' ? JSON.parse(d.related_groups) : d.related_groups; } catch(e) {}
     if (Array.isArray(groups) && groups.length > 0) {
       const values = groups.map(gid => [id, gid]);
-      await db.query(`INSERT IGNORE INTO product_related_groups (product_id, group_id) VALUES ?`, [values]);
+      await conn.query(`INSERT IGNORE INTO product_related_groups (product_id, group_id) VALUES ?`, [values]);
     }
   }
 
@@ -307,22 +298,22 @@ exports.updateGroup = (id, groupId) =>
 exports.remove = (id) => db.query("DELETE FROM products WHERE id = ?", [id]);
 
 // ── Images ─────────────────────────────────────────────────
-exports.addImage = async (pid, url, pub, sort) => {
+exports.addImage = async (pid, url, pub, sort, conn = db) => {
   const id = crypto.randomUUID();
-  await db.query("INSERT INTO product_images (id,product_id,url,public_id,sort_order) VALUES (?,?,?,?,?)",
+  await conn.query("INSERT INTO product_images (id,product_id,url,public_id,sort_order) VALUES (?,?,?,?,?)",
     [id, pid, url, pub, sort]);
   return id;
 };
 exports.getImages     = (pid) =>
   db.query("SELECT * FROM product_images WHERE product_id=? ORDER BY sort_order", [pid]);
-exports.deleteImage   = (id)  =>
-  db.query("DELETE FROM product_images WHERE id=?", [id]);
+exports.deleteImage   = (id, conn = db)  =>
+  conn.query("DELETE FROM product_images WHERE id=?", [id]);
 
 // ── Lids ───────────────────────────────────────────────────
 
 // إضافة غطاء يدوي جديد (اسم فقط)
-exports.addManualLid = async (name) => {
-  const [existing] = await db.query(
+exports.addManualLid = async (name, conn = db) => {
+  const [existing] = await conn.query(
     "SELECT id FROM manual_lids WHERE name = ?",
     [name]
   );
@@ -330,7 +321,7 @@ exports.addManualLid = async (name) => {
     return existing[0].id;
   }
   const id = crypto.randomUUID();
-  await db.query(
+  await conn.query(
     "INSERT INTO manual_lids (id, name) VALUES (?, ?)",
     [id, name]
   );
@@ -349,34 +340,33 @@ exports.getAllManualLids = async () => {
   return rows;
 };
 
-exports.deleteManualLid = async (id) => {
-  await db.query("DELETE FROM manual_lids WHERE id = ?", [id]);
+exports.deleteManualLid = async (id, conn = db) => {
+  await conn.query("DELETE FROM manual_lids WHERE id = ?", [id]);
 };
 
 // تحويل غطاء يدوي إلى غطاء حقيقي
-exports.convertManualLidToRealLid = async (manualLidId, newRealLidId) => {
-  const [rows] = await db.query(
+exports.convertManualLidToRealLid = async (manualLidId, newRealLidId, conn = db) => {
+  const [rows] = await conn.query(
     "SELECT product_id FROM product_manual_lids WHERE manual_lid_id = ?",
     [manualLidId]
   );
   
   if (rows.length > 0) {
     const values = rows.map(r => [r.product_id, newRealLidId]);
-    await db.query(
+    await conn.query(
       "INSERT IGNORE INTO product_lids (product_id, lid_id) VALUES ?",
       [values]
     );
   }
   
-  await db.query("DELETE FROM product_manual_lids WHERE manual_lid_id = ?", [manualLidId]);
-  
-  await db.query("DELETE FROM manual_lids WHERE id = ?", [manualLidId]);
+  await conn.query("DELETE FROM product_manual_lids WHERE manual_lid_id = ?", [manualLidId]);
+  await conn.query("DELETE FROM manual_lids WHERE id = ?", [manualLidId]);
 };
 
-exports.setLids = async (productId, lidData) => {
+exports.setLids = async (productId, lidData, conn = db) => {
   if (lidData === undefined) return;
-  await db.query("DELETE FROM product_lids WHERE product_id=?", [productId]);
-  await db.query("DELETE FROM product_manual_lids WHERE product_id=?", [productId]);
+  await conn.query("DELETE FROM product_lids WHERE product_id=?", [productId]);
+  await conn.query("DELETE FROM product_manual_lids WHERE product_id=?", [productId]);
   
   if (!Array.isArray(lidData) || !lidData.length) return;
   
@@ -384,7 +374,7 @@ exports.setLids = async (productId, lidData) => {
   const manualLids = lidData.filter(l => l.manual);
   
   if (existingLids.length) {
-    await db.query(
+    await conn.query(
       "INSERT INTO product_lids (product_id, lid_id) VALUES ?",
       [existingLids.map((l) => [productId, l.id || l])]
     );
@@ -392,8 +382,8 @@ exports.setLids = async (productId, lidData) => {
   
   if (manualLids.length) {
     for (const manual of manualLids) {
-      const manualId = await exports.addManualLid(manual.name);
-      await db.query(
+      const manualId = await exports.addManualLid(manual.name, conn);
+      await conn.query(
         "INSERT INTO product_manual_lids (product_id, manual_lid_id) VALUES (?, ?) ",
         [productId, manualId]
       );

@@ -77,9 +77,16 @@ exports.getOne = async (req, res) => {
 };
 
 exports.create = async (req, res) => {
+  const db = require("../config/db");
+  const conn = await db.getConnection();
+  await conn.beginTransaction();
+
   try {
     const { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids, convert_manual_lid_id } = req.body;
-    if (!name) return res.status(400).json({ error: "name required" });
+    if (!name) {
+      await conn.rollback();
+      return res.status(400).json({ error: "name required" });
+    }
 
     // Auto-translate using AI if needed
     const { name_en, size_en, notes_en } = await translateProduct({ name, size, notes });
@@ -87,31 +94,40 @@ exports.create = async (req, res) => {
     let parsedLids = [];
     if (lid_ids) {
       try {
-        parsedLids = JSON.parse(lid_ids);
+        parsedLids = typeof lid_ids === 'string' ? JSON.parse(lid_ids) : (Array.isArray(lid_ids) ? lid_ids : []);
       } catch (e) {
         parsedLids = [];
       }
     }
 
-    const pid = await model.create({ name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en });
+    const pid = await model.create(
+      { name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en },
+      conn
+    );
 
-    if (req.files?.length)
-      for (let i = 0; i < req.files.length; i++)
-        await model.addImage(pid, req.files[i].path, req.files[i].filename, i);
-
-    await model.setLids(pid, parsedLids);
-
-    if (convert_manual_lid_id) { 
-      await model.convertManualLidToRealLid(convert_manual_lid_id, pid); 
+    if (req.files?.length) {
+      for (let i = 0; i < req.files.length; i++) {
+        await model.addImage(pid, req.files[i].path, req.files[i].filename, i, conn);
+      }
     }
 
+    await model.setLids(pid, parsedLids, conn);
+
+    if (convert_manual_lid_id) { 
+      await model.convertManualLidToRealLid(convert_manual_lid_id, pid, conn); 
+    }
+
+    await conn.commit();
     res.status(201).json({ id: pid });
   } catch (e) {
+    await conn.rollback();
     if (e.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
     }
     console.error("Create product error:", e);
     res.status(500).json({ error: "Internal server error" }); 
+  } finally {
+    conn.release();
   }
 };
 
