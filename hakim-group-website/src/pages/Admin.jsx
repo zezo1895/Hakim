@@ -431,47 +431,95 @@ function MaterialsManager({ grouped, onRefresh, toast }) {
   };
 
   const delCategory = async (id) => {
-    if (!confirm("هيتحذف وكل خاماته الفرعية!")) return;
-    await apiFetch(`/material-categories/${id}`, { method: "DELETE" });
-    onRefresh();
+    if (!window.confirm("هيتحذف وكل خاماته الفرعية! هل تريد الاستمرار؟")) return;
+    try {
+      const res = await apiFetch(`/material-categories/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast("تم حذف الفئة بنجاح ✓");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل حذف الفئة", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
   };
 
   const editCategory = async (id, name) => {
-    await apiFetch(`/material-categories/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    onRefresh();
+    try {
+      const res = await apiFetch(`/material-categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        toast("تم التعديل بنجاح ✓");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل التعديل", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
   };
 
   const addSub = async (catId) => {
     const name = newSub[catId]?.trim();
     if (!name) return;
-    const res = await apiFetch("/materials", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, category_id: catId }),
-    });
-    if (res.ok) {
-      toast("تمت إضافة الخامة ✓");
-      setNewSub((p) => ({ ...p, [catId]: "" }));
-      onRefresh();
-    } else toast("موجودة بالفعل", "error");
+    try {
+      const res = await apiFetch("/materials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, category_id: catId }),
+      });
+      if (res.ok) {
+        toast("تمت إضافة الخامة ✓");
+        setNewSub((p) => ({ ...p, [catId]: "" }));
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "موجودة بالفعل أو حدث خطأ", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
   };
 
   const delSub = async (id) => {
-    await apiFetch(`/materials/${id}`, { method: "DELETE" });
-    onRefresh();
+    if (!window.confirm("هل أنت متأكد من حذف هذه الخامة؟")) return;
+    try {
+      const res = await apiFetch(`/materials/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast("تم حذف الخامة ✓");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل حذف الخامة", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
   };
 
   const editSub = async (id, name) => {
-    await apiFetch(`/materials/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
-    });
-    onRefresh();
+    try {
+      const res = await apiFetch(`/materials/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        toast("تم التعديل بنجاح ✓");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل التعديل", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
   };
 
   return (
@@ -1554,25 +1602,55 @@ function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
 
   const crud = (endpoint) => ({
     add: async (name) => {
-      await apiFetch(`/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      toast("تمت الإضافة ✓");
-      onRefresh();
+      try {
+        const res = await apiFetch(`/${endpoint}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (res.ok) {
+          toast("تمت الإضافة ✓");
+          onRefresh();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast(data.error || "فشلت الإضافة", "error");
+        }
+      } catch {
+        toast("فشل الاتصال بالخادم", "error");
+      }
     },
     del: async (id) => {
-      await apiFetch(`/${endpoint}/${id}`, { method: "DELETE" });
-      onRefresh();
+      if (!window.confirm("هل أنت متأكد من الحذف؟")) return;
+      try {
+        const res = await apiFetch(`/${endpoint}/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          toast("تم الحذف ✓");
+          onRefresh();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast(data.error || "فشل الحذف", "error");
+        }
+      } catch {
+        toast("فشل الاتصال بالخادم", "error");
+      }
     },
     edit: async (id, name) => {
-      await apiFetch(`/${endpoint}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      onRefresh();
+      try {
+        const res = await apiFetch(`/${endpoint}/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name }),
+        });
+        if (res.ok) {
+          toast("تم التعديل بنجاح ✓");
+          onRefresh();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast(data.error || "فشل التعديل", "error");
+        }
+      } catch {
+        toast("فشل الاتصال بالخادم", "error");
+      }
     },
   });
 

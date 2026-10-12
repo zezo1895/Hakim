@@ -27,7 +27,8 @@ exports.searchLids = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    res.json(await model.getAll());
+    const { category, type, material } = req.query;
+    res.json(await model.getAll({ category, type, material }));
   } catch (e) {
     console.error("Get all products error:", e);
     res.status(500).json({ error: "Internal server error" });
@@ -69,7 +70,12 @@ exports.getOne = async (req, res) => {
     const siblings = groupIds.length > 0
       ? (await model.getSiblings(groupIds, req.params.id))[0]
       : [];
-    res.json({ ...product, siblings });
+
+    const related = product.material_id
+      ? (await model.getRelatedByMaterial(product.material_id, req.params.id, groupIds))[0]
+      : [];
+
+    res.json({ ...product, siblings, related });
   } catch (e) {
     console.error("Get one product error:", e);
     res.status(500).json({ error: "Internal server error" });

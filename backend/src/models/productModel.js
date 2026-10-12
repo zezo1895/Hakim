@@ -46,9 +46,27 @@ const parse = (r) => {
 };
 
 // ── Reads ──────────────────────────────────────────────────
-exports.getAll = async () => {
+exports.getAll = async (filters = {}) => {
+  const whereConditions = [];
+  const params = [];
+
+  if (filters.category) {
+    whereConditions.push("mc.name = ?");
+    params.push(filters.category);
+  }
+  if (filters.type) {
+    whereConditions.push("pt.name = ?");
+    params.push(filters.type);
+  }
+  if (filters.material) {
+    whereConditions.push("m.name = ?");
+    params.push(filters.material);
+  }
+
+  const whereClause = whereConditions.length ? `WHERE ${whereConditions.join(" AND ")}` : "";
   const [rows] = await db.query(
-    `${BASE_SELECT} GROUP BY p.id ORDER BY p.sort_order ASC, p.created_at DESC`
+    `${BASE_SELECT} ${whereClause} GROUP BY p.id ORDER BY p.sort_order ASC, p.created_at DESC`,
+    params
   );
   return rows.map(parse);
 };
@@ -168,6 +186,22 @@ exports.getSiblings = (groupIds, excludeId) => {
     AND p.id != ?
     GROUP BY p.id
   `, [excludeId]);
+};
+
+exports.getRelatedByMaterial = (materialId, excludeId, excludeGroupIds = []) => {
+  if (!materialId) return Promise.resolve([[]]);
+  const validGroupIds = (excludeGroupIds || []).filter(Boolean);
+  const groupClause = validGroupIds.length
+    ? `AND (p.group_id IS NULL OR p.group_id NOT IN (${validGroupIds.map(id => db.escape(id)).join(',')}))`
+    : '';
+  return db.query(`
+    SELECT p.id, p.name, p.name_en, p.code, p.size, p.size_en, p.temp, MIN(pi.url) AS thumbnail
+    FROM products p
+    LEFT JOIN product_images pi ON pi.product_id = p.id
+    WHERE p.material_id = ? AND p.id != ? ${groupClause}
+    GROUP BY p.id
+    LIMIT 3
+  `, [materialId, excludeId]);
 };
 
 // ── Search ──────────────────────────────────────────────────

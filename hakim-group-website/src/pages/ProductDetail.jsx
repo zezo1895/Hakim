@@ -103,11 +103,17 @@ export default function ProductDetail({ popupId, isPopup = false }) {
   const navigate = useNavigate();
   const { addToCart } = useQuote();
 
+  // إعادة تعيين مؤشر الصورة النشطة عند تغيير المنتج
+  useEffect(() => {
+    setActiveImg(0);
+  }, [id]);
+
   useEffect(() => {
     const fetchProductData = async () => {
       try {
         setLoading(true);
         setError(null);
+        setActiveImg(0);
         
         const productResponse = await fetch(`${API}/products/${id}`);
         if (!productResponse.ok) {
@@ -129,35 +135,19 @@ export default function ProductDetail({ popupId, isPopup = false }) {
           fetch(`${API}/products/${id}/view`, { method: "POST" }).catch(console.error);
         }
 
-        // جلب جميع المنتجات للعثور على المنتجات المرتبطة
-        const allProductsResponse = await fetch(`${API}/products`);
-        if (!allProductsResponse.ok) {
-          throw new Error(`Failed to fetch all products: ${allProductsResponse.status}`);
-        }
-        const allProducts = await allProductsResponse.json();
+        // المنتجات من نفس المجموعة (الأصناف المشابهة / المقاسات الأخرى)
+        const siblings = (productData.siblings || []).map((s) => ({
+          ...s,
+          images: s.images || (s.thumbnail ? [{ url: s.thumbnail }] : []),
+        }));
+        setSameGroupProducts(siblings);
 
-        if (Array.isArray(allProducts)) {
-          // المنتجات من نفس المجموعة (نفس المقاسات المختلفة)
-          const sameGroup = allProducts.filter(
-            (p) => 
-              p.group_id === productData.group_id && 
-              p.id !== productData.id &&
-              p.group_id !== null &&
-              p.group_id !== ""
-          );
-          setSameGroupProducts(sameGroup);
-
-          // منتجات من نفس الخامة (باستثناء نفس المجموعة)
-          const sameMaterial = allProducts
-            .filter(
-              (p) => 
-                p.material_id === productData.material_id && 
-                p.id !== productData.id &&
-                !sameGroup.some(g => g.id === p.id)
-            )
-            .slice(0, 3);
-          setRelatedProducts(sameMaterial);
-        }
+        // منتجات من نفس الخامة (مجلوبة مباشرة مع المنتج من الـ backend بدون تحميل الكتالوج كاملاً)
+        const related = (productData.related || []).map((r) => ({
+          ...r,
+          images: r.images || (r.thumbnail ? [{ url: r.thumbnail }] : []),
+        }));
+        setRelatedProducts(related);
       } catch (err) {
         console.error("Error fetching product:", err);
         setError("فشل تحميل بيانات المنتج. يرجى المحاولة مرة أخرى.");
@@ -169,7 +159,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
     if (id) {
       fetchProductData();
     }
-  }, [id]);
+  }, [id, isPopup, navigate]);
 
   // التنقل بين الصور
   const nextImage = () => {
