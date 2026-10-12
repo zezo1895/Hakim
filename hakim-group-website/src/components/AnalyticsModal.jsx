@@ -17,22 +17,39 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 export default function AnalyticsModal({ onClose, authKey }) {
   const [data, setData] = useState({ topProducts: [], topSearches: [] });
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
     fetch(`${API}/products/analytics`, {
       headers: {
         Authorization: `Bearer ${authKey}`
       }
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "تعذر تحميل الإحصائيات (قد تكون الجلسة منتهية)");
+        }
+        return res.json();
+      })
       .then((d) => {
-        setData(d);
+        if (!isMounted) return;
+        setData({
+          topProducts: Array.isArray(d?.topProducts) ? d.topProducts : [],
+          topSearches: Array.isArray(d?.topSearches) ? d.topSearches : []
+        });
         setLoading(false);
       })
       .catch((err) => {
-        console.error(err);
+        console.error("Analytics fetch error:", err);
+        if (!isMounted) return;
+        setErrorMsg(err.message || "حدث خطأ أثناء تحميل الإحصائيات");
+        setData({ topProducts: [], topSearches: [] });
         setLoading(false);
       });
+
+    return () => { isMounted = false; };
   }, [authKey]);
 
   // ألوان الجراف لتكون متناسقة وجذابة
@@ -77,6 +94,13 @@ export default function AnalyticsModal({ onClose, authKey }) {
             <p className="text-gray-500 mt-2">راقب أداء المنتجات واكتشف احتياجات عملائك</p>
           </div>
 
+          {errorMsg && (
+            <div className="mb-8 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-center text-sm font-bold flex items-center justify-center gap-2">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {loading ? (
             <div className="py-32 flex flex-col items-center justify-center gap-4">
               <div className="w-12 h-12 border-4 border-brand-orange/30 border-t-brand-orange rounded-full animate-spin" />
@@ -102,12 +126,12 @@ export default function AnalyticsModal({ onClose, authKey }) {
                   </div>
                 </div>
 
-                {data.topProducts?.length === 0 ? (
+                {(!data?.topProducts || data.topProducts.length === 0) ? (
                   <div className="py-20 text-center text-gray-400">لا توجد مشاهدات كافية بعد</div>
                 ) : (
                   <div className="h-72 w-full" dir="ltr">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={data.topProducts} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+                      <BarChart data={data.topProducts || []} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                         <XAxis 
                           dataKey="name" 
@@ -124,7 +148,7 @@ export default function AnalyticsModal({ onClose, authKey }) {
                           contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
                         />
                         <Bar dataKey="views_count" name="المشاهدات" radius={[8, 8, 0, 0]}>
-                          {data.topProducts.map((entry, index) => (
+                          {(data.topProducts || []).map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Bar>
@@ -151,14 +175,14 @@ export default function AnalyticsModal({ onClose, authKey }) {
                   </div>
                 </div>
 
-                {data.topSearches?.length === 0 ? (
+                {(!data?.topSearches || data.topSearches.length === 0) ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-3">
                     <SearchX size={48} className="opacity-20" />
                     <p>المخزن يغطي جميع طلبات البحث بامتياز!</p>
                   </div>
                 ) : (
                   <div className="flex-1 flex flex-col gap-3 overflow-y-auto pr-2 max-h-72">
-                    {data.topSearches?.map((s, i) => (
+                    {(data.topSearches || []).map((s, i) => (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}

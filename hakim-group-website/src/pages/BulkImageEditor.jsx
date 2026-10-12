@@ -20,7 +20,8 @@ export default function BulkImageEditor({ products, onClose, onRefresh, apiFetch
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.code.toLowerCase().includes(searchTerm.toLowerCase());
+      const s = (searchTerm || '').toLowerCase();
+      const matchSearch = (p.name || '').toLowerCase().includes(s) || (p.code || '').toLowerCase().includes(s);
       return matchSearch;
     });
   }, [products, searchTerm]);
