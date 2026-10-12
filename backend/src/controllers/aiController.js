@@ -259,7 +259,7 @@ ${productsContext}
 
   } catch (error) {
     console.error("AI Error:", error.message || error);
-    res.status(500).json({ error: 'Failed to process AI request', details: error.message });
+    res.status(500).json({ error: 'Failed to process AI request' });
   }
 };
 

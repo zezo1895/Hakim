@@ -1,3 +1,14 @@
+/**
+ * Admin Authentication Middleware
+ * 
+ * Supported Auth Mechanisms:
+ * 1. Bearer JWT (Standard for Frontend Web App):
+ *    Passed in `Authorization: Bearer <token>` header, signed with HS256.
+ * 2. x-admin-secret (Restricted to CI/CD and Server-to-Server Webhooks):
+ *    Direct header matching process.env.ADMIN_SECRET via timingSafeEqual.
+ * 
+ * Note: Query parameter authentication (?secret=) is strictly disallowed for security.
+ */
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");

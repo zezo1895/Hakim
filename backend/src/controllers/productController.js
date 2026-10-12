@@ -7,7 +7,10 @@ exports.search    = async (req, res) => {
     const q = (req.query.q || "").trim();
     if (q.length < 1) return res.json([]);
     res.json(await model.search(q));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("Search error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 exports.searchLids = async (req, res) => {
@@ -16,17 +19,28 @@ exports.searchLids = async (req, res) => {
     if (!q) return res.json([]);
     const results = await model.searchLids(q);
     res.json(results);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("Search lids error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 exports.getAll = async (req, res) => {
-  try { res.json(await model.getAll()); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  try {
+    res.json(await model.getAll());
+  } catch (e) {
+    console.error("Get all products error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 exports.getAllLidsMap = async (req, res) => {
-  try { res.json(await model.getAllLidsMap()); }
-  catch (e) { res.status(500).json({ error: e.message }); }
+  try {
+    res.json(await model.getAllLidsMap());
+  } catch (e) {
+    console.error("Get lids map error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 // إعادة ترتيب المنتجات — بياخد { order: [id1, id2, id3, ...] } بالترتيب الجديد
@@ -38,7 +52,10 @@ exports.reorder = async (req, res) => {
     }
     await model.reorder(order.map(String));
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("Reorder error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 exports.getOne = async (req, res) => {
@@ -53,7 +70,10 @@ exports.getOne = async (req, res) => {
       ? (await model.getSiblings(groupIds, req.params.id))[0]
       : [];
     res.json({ ...product, siblings });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("Get one product error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 exports.create = async (req, res) => {
@@ -90,7 +110,8 @@ exports.create = async (req, res) => {
     if (e.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
     }
-    res.status(500).json({ error: e.message }); 
+    console.error("Create product error:", e);
+    res.status(500).json({ error: "Internal server error" }); 
   }
 };
 
@@ -102,7 +123,10 @@ exports.updateGroup = async (req, res) => {
     if (!group_id) return res.status(400).json({ error: "group_id required" });
     await model.updateGroup(id, group_id);
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("Update group error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 exports.update = async (req, res) => {
@@ -161,7 +185,8 @@ exports.update = async (req, res) => {
     if (e.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
     }
-    res.status(500).json({ error: e.message }); 
+    console.error("Update product error:", e);
+    res.status(500).json({ error: "Internal server error" }); 
   }
 };
 
@@ -224,7 +249,7 @@ exports.bulkImagesUpdate = async (req, res) => {
     res.json({ success: true });
   } catch(e) {
     console.error("Bulk image update error:", e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -252,7 +277,7 @@ exports.remove = async (req, res) => {
       if (product.code) {
         const safeCode = product.code.trim().replace(/[^a-zA-Z0-9_-]/g, '_');
         const folderPath = `hakim-group/products/${safeCode}`;
-        console.log(`dY", Deleting empty folder: ${folderPath}`);
+        console.log(`Deleting empty folder: ${folderPath}`);
       await cloudinary.api.delete_folder(folderPath).catch((err) => {
         console.log("ℹ️ Note: Folder deletion skipped or folder wasn't empty:", err.message);
       });
@@ -262,8 +287,8 @@ exports.remove = async (req, res) => {
 
     res.json({ success: true, message: "تم حذف المنتج، صوره، ومجلده الخاص من السحاب والداتابيز بنجاح! 🚀" });
   } catch (e) {
-    console.error("❌ Error in remove controller:", e.message);
-    res.status(500).json({ error: e.message });
+    console.error("❌ Error in remove controller:", e);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 exports.getManualLids = async (req, res) => {
@@ -271,8 +296,8 @@ exports.getManualLids = async (req, res) => {
     const lids = await model.getAllManualLids();
     res.json(lids);
   } catch (e) {
-    console.error('Error fetching manual lids:', e.message);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error fetching manual lids:', e);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -283,13 +308,39 @@ exports.deleteManualLid = async (req, res) => {
     await model.deleteManualLid(id);
     res.json({ success: true });
   } catch (e) {
-    console.error('Error deleting manual lid:', e.message);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Error deleting manual lid:', e);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 
-exports.incrementViews = async (req, res) => { try { await model.incrementViews(req.params.id); res.json({ success: true }); } catch (err) { res.status(500).json({ error: err.message }); } };
-exports.logSearch = async (req, res) => { try { if(req.body.query) await model.logSearch(req.body.query); res.json({ success: true }); } catch (err) { res.status(500).json({ error: err.message }); } };
-exports.getAnalytics = async (req, res) => { try { const data = await model.getAnalytics(); res.json(data); } catch (err) { res.status(500).json({ error: err.message }); } };
+exports.incrementViews = async (req, res) => {
+  try {
+    await model.incrementViews(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("incrementViews error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.logSearch = async (req, res) => {
+  try {
+    if (req.body.query) await model.logSearch(req.body.query);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("logSearch error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.getAnalytics = async (req, res) => {
+  try {
+    const data = await model.getAnalytics();
+    res.json(data);
+  } catch (err) {
+    console.error("getAnalytics error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 

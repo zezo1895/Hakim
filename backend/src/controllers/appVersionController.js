@@ -74,7 +74,7 @@ exports.requestUpdate = async (req, res) => {
     res.json({ message: 'App version updated successfully', newVersion: targetVersion, downloadUrl });
   } catch (error) {
     console.error('Error requesting update:', error);
-    res.status(500).json({ error: error.message || 'Failed to update version' });
+    res.status(500).json({ error: 'Failed to update version' });
   }
 };
 

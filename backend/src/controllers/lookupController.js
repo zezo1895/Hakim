@@ -7,7 +7,10 @@ const makeCrud = (getAll, create, update, remove) => ({
     try {
       const [rows] = await getAll(req.query.category_id);
       res.json(rows);
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      console.error("Lookup getAll error:", e);
+      res.status(500).json({ error: "Internal server error" });
+    }
   },
 
   create: async (req, res) => {
@@ -19,7 +22,8 @@ const makeCrud = (getAll, create, update, remove) => ({
     } catch (e) {
       if (e.code === "ER_DUP_ENTRY")
         return res.status(409).json({ error: "موجود بالفعل" });
-      res.status(500).json({ error: e.message });
+      console.error("Lookup create error:", e);
+      res.status(500).json({ error: "Internal server error" });
     }
   },
 
@@ -29,14 +33,20 @@ const makeCrud = (getAll, create, update, remove) => ({
       if (!name?.trim()) return res.status(400).json({ error: "name required" });
       await update(req.params.id, name.trim());
       res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      console.error("Lookup update error:", e);
+      res.status(500).json({ error: "Internal server error" });
+    }
   },
 
   remove: async (req, res) => {
     try {
       await remove(req.params.id);
       res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) {
+      console.error("Lookup remove error:", e);
+      res.status(500).json({ error: "Internal server error" });
+    }
   },
 });
 
@@ -56,5 +66,8 @@ exports.getMaterialsGrouped = async (req, res) => {
       if (r.id) map[r.cat_id].materials.push({ id: r.id, name: r.name });
     });
     res.json(Object.values(map));
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error("Lookup getMaterialsGrouped error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
