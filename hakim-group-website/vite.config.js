@@ -74,5 +74,12 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'https://hakim-production-5171.up.railway.app',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 });
