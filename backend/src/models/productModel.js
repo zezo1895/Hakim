@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const crypto = require("crypto");
 
 const IMG_CONCAT = `
   GROUP_CONCAT(
@@ -127,10 +128,17 @@ exports.getAllLidsMap = async () => {
   return map;
 };
 
-exports.getById = async (id) => {
-  const [rows] = await db.query(`${BASE_SELECT} WHERE p.id = ? GROUP BY p.id`, [id]);
+exports.getById = async (idOrSlug) => {
+  const decoded = decodeURIComponent(idOrSlug || "").trim();
+  const withSpaces = decoded.replace(/-/g, " ");
+  const withHyphens = decoded.replace(/\s+/g, "-");
+  const [rows] = await db.query(
+    `${BASE_SELECT} WHERE p.id = ? OR p.code = ? OR p.code = ? OR p.code = ? OR p.name = ? OR p.name = ? GROUP BY p.id`,
+    [decoded, decoded, withSpaces, withHyphens, decoded, withSpaces]
+  );
   const product = parse(rows[0]);
   if (product) {
+    const realId = product.id;
     // جلب الأغطية العادية (منتجات من نوع غطاء)
     const [lids] = await db.query(`
       SELECT p.id, p.name, p.name_en, p.code, p.size, p.size_en,
@@ -143,7 +151,7 @@ exports.getById = async (id) => {
       LEFT JOIN product_images pi ON pi.product_id = p.id
       WHERE pl.product_id = ?
       GROUP BY p.id
-    `, [id]);
+    `, [realId]);
     
     // جلب الأغطية اليدوية
     const [manualLids] = await db.query(`
@@ -151,7 +159,7 @@ exports.getById = async (id) => {
       FROM product_manual_lids pml
       JOIN manual_lids ml ON pml.manual_lid_id = ml.id
       WHERE pml.product_id = ?
-    `, [id]);
+    `, [realId]);
     
     // دمج الأغطية
     product.lids = [
@@ -205,9 +213,17 @@ exports.getRelatedByMaterial = (materialId, excludeId, excludeGroupIds = []) => 
 };
 
 // ── Search ──────────────────────────────────────────────────
-exports.search = async (q) => {
+exports.search = async (q, filters = {}) => {
+  const whereConditions = ["(p.name LIKE ? OR p.code LIKE ?)"];
+  const params = [`%${q}%`, `%${q}%`];
+
+  if (filters.category) {
+    whereConditions.push("mc.name = ?");
+    params.push(filters.category);
+  }
+
   const [rows] = await db.query(`
-    SELECT p.id, p.name, p.code, p.size,
+    SELECT p.id, p.name, p.code, p.size, p.model_url,
            pt.name AS type_name, m.name AS material_name,
            mc.name AS material_category, MIN(pi.url) AS thumbnail
     FROM products p
@@ -215,10 +231,10 @@ exports.search = async (q) => {
     LEFT JOIN materials           m  ON m.id  = p.material_id
     LEFT JOIN material_categories mc ON mc.id = m.category_id
     LEFT JOIN product_images      pi ON pi.product_id = p.id
-    WHERE p.name LIKE ? OR p.code LIKE ?
+    WHERE ${whereConditions.join(" AND ")}
     GROUP BY p.id
-    LIMIT 12
-  `, [`%${q}%`, `%${q}%`]);
+    LIMIT 24
+  `, params);
   return rows;
 };
 
@@ -277,10 +293,11 @@ exports.create = async (d, conn = db) => {
 
   const id = crypto.randomUUID();
   await conn.query(
-    `INSERT INTO products (id, name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, sort_order)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO products (id, name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, sort_order, model_url, model_file_id)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, d.name, d.name_en||null, d.code||null, d.type_id||null, d.material_id||null,
-     d.temp, d.group_id||null, d.size||null, d.size_en||null, d.notes||null, d.notes_en||null, insertOrder]
+     d.temp || 'both', d.group_id||null, d.size||null, d.size_en||null, d.notes||null, d.notes_en||null, insertOrder,
+     d.model_url||null, d.model_file_id||null]
   );
 
   if (d.related_groups) {
@@ -305,12 +322,29 @@ exports.reorder = async (orderedIds) => {
   );
 };
 
-exports.update = async (id, d) => {
-  await db.query(
-    `UPDATE products SET name=?, name_en=?, code=?, type_id=?, material_id=?, temp=?,
-     group_id=?, size=?, size_en=?, notes=?, notes_en=? WHERE id=?`,
-    [d.name, d.name_en||null, d.code||null, d.type_id||null, d.material_id||null,
-     d.temp, d.group_id||null, d.size||null, d.size_en||null, d.notes||null, d.notes_en||null, id]
+exports.update = async (id, d, conn = db) => {
+  const updates = [
+    "name=?", "name_en=?", "code=?", "type_id=?", "material_id=?", "temp=?",
+    "group_id=?", "size=?", "size_en=?", "notes=?", "notes_en=?"
+  ];
+  const params = [
+    d.name, d.name_en||null, d.code||null, d.type_id||null, d.material_id||null,
+    d.temp || 'both', d.group_id||null, d.size||null, d.size_en||null, d.notes||null, d.notes_en||null
+  ];
+
+  if (d.model_url !== undefined) {
+    updates.push("model_url=?");
+    params.push(d.model_url);
+  }
+  if (d.model_file_id !== undefined) {
+    updates.push("model_file_id=?");
+    params.push(d.model_file_id);
+  }
+  params.push(id);
+
+  await conn.query(
+    `UPDATE products SET ${updates.join(", ")} WHERE id=?`,
+    params
   );
 
   if (d.related_groups !== undefined) {

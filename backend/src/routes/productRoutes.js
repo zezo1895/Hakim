@@ -43,9 +43,9 @@ router.post("/:id/view",           ctrl.incrementViews);
 // router.get("/admin/translate-all", ctrl.adminTranslateAll);
 router.post("/bulk-images",            adminAuth, upload.any(), ctrl.bulkImagesUpdate);
 router.get("/:id",                 ctrl.getOne);
-router.post("/",                   adminAuth, upload.array("images", 10), ctrl.create);
+router.post("/",                   adminAuth, upload.any(), ctrl.create);
 router.put("/:id/group",           adminAuth, ctrl.updateGroup);
-router.put("/:id",                 adminAuth, upload.array("images", 10), ctrl.update);
+router.put("/:id",                 adminAuth, upload.any(), ctrl.update);
 router.delete("/:id",              adminAuth, ctrl.remove);
 
 module.exports = router;

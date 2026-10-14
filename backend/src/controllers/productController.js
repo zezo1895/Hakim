@@ -5,8 +5,9 @@ const { translateProduct } = require("../services/translationService");
 exports.search    = async (req, res) => {
   try {
     const q = (req.query.q || "").trim();
+    const category = (req.query.category || "").trim();
     if (q.length < 1) return res.json([]);
-    res.json(await model.search(q));
+    res.json(await model.search(q, { category }));
   } catch (e) {
     console.error("Search error:", e);
     res.status(500).json({ error: "Internal server error" });
@@ -88,10 +89,27 @@ exports.create = async (req, res) => {
   await conn.beginTransaction();
 
   try {
-    const { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids, convert_manual_lid_id } = req.body;
+    let { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids, convert_manual_lid_id, category } = req.body;
     if (!name) {
       await conn.rollback();
-      return res.status(400).json({ error: "name required" });
+      return res.status(400).json({ error: "اسم المنتج مطلوب" });
+    }
+
+    // Ensure columns exist in products table
+    try {
+      await conn.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS model_url VARCHAR(1000) DEFAULT NULL");
+      await conn.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS model_file_id VARCHAR(255) DEFAULT NULL");
+    } catch (colErr) {}
+
+    // إذا كان القطاع ألومنيوم أو تم رفع مجسم 3D، نربطه بخامة الألومنيوم تلقائيًا إن لم تُحدد
+    if (category === "ألومنيوم" || req.modelFile) {
+      try {
+        await conn.query("INSERT IGNORE INTO material_categories (id, name) VALUES ('al-cat-01', 'ألومنيوم')");
+        await conn.query("INSERT IGNORE INTO materials (id, category_id, name) VALUES ('al-mat-01', 'al-cat-01', 'قطاعات ألومنيوم')");
+        await conn.query("INSERT IGNORE INTO product_types (id, name) VALUES ('al-type-01', 'قطاع ألومنيوم')");
+      } catch (seedErr) {}
+      if (!material_id) material_id = "al-mat-01";
+      if (!type_id) type_id = "al-type-01";
     }
 
     // Auto-translate using AI if needed
@@ -107,7 +125,21 @@ exports.create = async (req, res) => {
     }
 
     const pid = await model.create(
-      { name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en },
+      {
+        name,
+        name_en,
+        code,
+        type_id,
+        material_id,
+        temp: temp || 'both',
+        group_id,
+        size,
+        size_en,
+        notes,
+        notes_en,
+        model_url: req.modelFile ? req.modelFile.url : (req.body.model_url || null),
+        model_file_id: req.modelFile ? req.modelFile.fileId : (req.body.model_file_id || null),
+      },
       conn
     );
 
@@ -124,7 +156,11 @@ exports.create = async (req, res) => {
     }
 
     await conn.commit();
-    res.status(201).json({ id: pid });
+    res.status(201).json({ 
+      id: pid,
+      model_url: req.modelFile ? req.modelFile.url : (req.body.model_url || null),
+      model_file_id: req.modelFile ? req.modelFile.fileId : (req.body.model_file_id || null)
+    });
   } catch (e) {
     await conn.rollback();
     if (e.code === 'ER_DUP_ENTRY') {
@@ -154,12 +190,44 @@ exports.updateGroup = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, type_id, material_id, temp, group_id, size, notes,
-            lid_ids, convert_manual_lid_id, related_groups, remove_image_ids } = req.body;
+    let { name, code, type_id, material_id, temp, group_id, size, notes,
+          lid_ids, convert_manual_lid_id, related_groups, remove_image_ids,
+          remove_model, category } = req.body;
+
+    const currentProduct = await model.getById(id);
+    if (!currentProduct) {
+      return res.status(404).json({ error: "المنتج غير موجود" });
+    }
+
+    if ((category === "ألومنيوم" || req.modelFile) && !material_id && !currentProduct.material_id) {
+      material_id = "al-mat-01";
+    }
+
+    let model_url = undefined;
+    let model_file_id = undefined;
+
+    // التعامل مع استبدال أو حذف المجسم 3D
+    if (req.modelFile) {
+      // رفع مجسم جديد: نحذف القديم من ImageKit إن وُجد
+      if (currentProduct.model_file_id) {
+        await cloudinary.uploader.destroy(currentProduct.model_file_id).catch(() => {});
+      }
+      model_url = req.modelFile.url;
+      model_file_id = req.modelFile.fileId;
+    } else if (remove_model === "true" || remove_model === true) {
+      if (currentProduct.model_file_id) {
+        await cloudinary.uploader.destroy(currentProduct.model_file_id).catch(() => {});
+      }
+      model_url = null;
+      model_file_id = null;
+    }
 
     const { name_en, size_en, notes_en } = await translateProduct({ name, size, notes });
 
-    await model.update(id, { name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en, related_groups });
+    await model.update(id, {
+      name, name_en, code, type_id, material_id, temp, group_id, size, size_en, notes, notes_en,
+      related_groups, model_url, model_file_id
+    });
 
     if (remove_image_ids) {
       const toRemove = JSON.parse(remove_image_ids);
@@ -202,7 +270,11 @@ exports.update = async (req, res) => {
       }
       await model.setLids(id, parsedLids);
     }
-    res.json({ success: true });
+    res.json({ 
+      success: true,
+      model_url: model_url !== undefined ? model_url : currentProduct.model_url,
+      model_file_id: model_file_id !== undefined ? model_file_id : currentProduct.model_file_id
+    });
   } catch (e) {
     if (e.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
@@ -294,6 +366,12 @@ exports.remove = async (req, res) => {
         }
       });
       await Promise.all(deletePromises);
+    }
+
+    // حذف ملف المجسم 3D من ImageKit إن وُجد
+    if (product.model_file_id) {
+      console.log(`🗑️ Deleting 3D GLB model: ${product.model_file_id}`);
+      await cloudinary.uploader.destroy(product.model_file_id).catch(() => {});
     }
 
       if (product.code) {

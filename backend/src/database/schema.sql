@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS products (
   size_en     VARCHAR(100) DEFAULT NULL,
   notes       TEXT,
   notes_en    TEXT,
+  model_url   VARCHAR(500) DEFAULT NULL,
+  model_file_id VARCHAR(255) DEFAULT NULL,
   sort_order  INT DEFAULT 0,
   views_count INT DEFAULT 0,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
