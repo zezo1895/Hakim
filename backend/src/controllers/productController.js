@@ -86,34 +86,51 @@ exports.getOne = async (req, res) => {
 exports.create = async (req, res) => {
   const db = require("../config/db");
   const conn = await db.getConnection();
-  await conn.beginTransaction();
 
   try {
+    // 1. Ensure columns & lookups exist FIRST, before starting transaction!
+    if (typeof db.runAutoMigrations === "function") {
+      await db.runAutoMigrations(conn);
+    }
+
     let { name, code, type_id, material_id, temp, group_id, size, notes, lid_ids, convert_manual_lid_id, category } = req.body;
     if (!name) {
-      await conn.rollback();
       return res.status(400).json({ error: "اسم المنتج مطلوب" });
     }
 
-    // Ensure columns exist in products table
-    try {
-      await conn.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS model_url VARCHAR(1000) DEFAULT NULL");
-      await conn.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS model_file_id VARCHAR(255) DEFAULT NULL");
-    } catch (colErr) {}
+    // Default aluminium lookups if uploading 3D or aluminium category
+    const isAluminium = category === "ألومنيوم" || req.modelFile || (material_id && String(material_id).includes("al-"));
+    if (isAluminium) {
+      if (!material_id || material_id === "al-mat-01") material_id = "al-mat-01";
+      if (!type_id || type_id === "al-type-01") type_id = "al-type-01";
+    }
 
-    // إذا كان القطاع ألومنيوم أو تم رفع مجسم 3D، نربطه بخامة الألومنيوم تلقائيًا إن لم تُحدد
-    if (category === "ألومنيوم" || req.modelFile) {
-      try {
-        await conn.query("INSERT IGNORE INTO material_categories (id, name) VALUES ('al-cat-01', 'ألومنيوم')");
-        await conn.query("INSERT IGNORE INTO materials (id, category_id, name) VALUES ('al-mat-01', 'al-cat-01', 'قطاعات ألومنيوم')");
-        await conn.query("INSERT IGNORE INTO product_types (id, name) VALUES ('al-type-01', 'قطاع ألومنيوم')");
-      } catch (seedErr) {}
-      if (!material_id) material_id = "al-mat-01";
-      if (!type_id) type_id = "al-type-01";
+    // Verify foreign keys to prevent ER_NO_REFERENCED_ROW_2
+    if (material_id) {
+      const [matRows] = await conn.query("SELECT id FROM materials WHERE id = ?", [material_id]);
+      if (!matRows.length) {
+        console.warn(`material_id ${material_id} not found in materials table, resetting to null`);
+        material_id = null;
+      }
+    }
+    if (type_id) {
+      const [typeRows] = await conn.query("SELECT id FROM product_types WHERE id = ?", [type_id]);
+      if (!typeRows.length) {
+        console.warn(`type_id ${type_id} not found in product_types table, resetting to null`);
+        type_id = null;
+      }
     }
 
     // Auto-translate using AI if needed
-    const { name_en, size_en, notes_en } = await translateProduct({ name, size, notes });
+    let name_en = null, size_en = null, notes_en = null;
+    try {
+      const tr = await translateProduct({ name, size, notes });
+      name_en = tr.name_en;
+      size_en = tr.size_en;
+      notes_en = tr.notes_en;
+    } catch (trErr) {
+      console.warn("Translation failed, continuing:", trErr.message);
+    }
 
     let parsedLids = [];
     if (lid_ids) {
@@ -123,6 +140,9 @@ exports.create = async (req, res) => {
         parsedLids = [];
       }
     }
+
+    // NOW begin transaction
+    await conn.beginTransaction();
 
     const pid = await model.create(
       {
@@ -162,12 +182,15 @@ exports.create = async (req, res) => {
       model_file_id: req.modelFile ? req.modelFile.fileId : (req.body.model_file_id || null)
     });
   } catch (e) {
-    await conn.rollback();
+    await conn.rollback().catch(() => {});
     if (e.code === 'ER_DUP_ENTRY') {
       return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
     }
     console.error("Create product error:", e);
-    res.status(500).json({ error: "Internal server error" }); 
+    res.status(500).json({ 
+      error: e.sqlMessage || e.message || "Internal server error",
+      code: e.code 
+    }); 
   } finally {
     conn.release();
   }
@@ -280,7 +303,10 @@ exports.update = async (req, res) => {
       return res.status(400).json({ error: "هذا الكود مستخدم بالفعل لمنتج آخر. يرجى اختيار كود غير مكرر." });
     }
     console.error("Update product error:", e);
-    res.status(500).json({ error: "Internal server error" }); 
+    res.status(500).json({ 
+      error: e.sqlMessage || e.message || "Internal server error",
+      code: e.code 
+    }); 
   }
 };
 

@@ -40,7 +40,16 @@ router.get("/analytics",           adminAuth, ctrl.getAnalytics);
 router.post("/analytics/search",   ctrl.logSearch);
 router.post("/:id/view",           ctrl.incrementViews);
 
-// router.get("/admin/translate-all", ctrl.adminTranslateAll);
+router.get("/migrate-schema", async (req, res) => {
+  try {
+    const db = require("../config/db");
+    const result = await db.runAutoMigrations();
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message, stack: err.stack });
+  }
+});
+
 router.post("/bulk-images",            adminAuth, upload.any(), ctrl.bulkImagesUpdate);
 router.get("/:id",                 ctrl.getOne);
 router.post("/",                   adminAuth, upload.any(), ctrl.create);
