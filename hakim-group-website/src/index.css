@@ -19,50 +19,60 @@
   body {
     font-family: "Cairo", "Tajawal", sans-serif;
     background-color: #ffffff;
-    color: #1f2937;
+    color: #1e293b;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 
+  /* Refined, thin scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: #f8fafc;
   }
   ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
     background: #1a3a6b;
-    border-radius: 99px;
   }
 }
 
 @layer components {
-  .section-title {
-    @apply text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-800;
-  }
   .section-badge {
-    @apply inline-block px-4 py-1 rounded-full bg-brand-blue/10 text-brand-blue text-xs font-semibold tracking-wider mb-4;
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-blue/5 border border-brand-blue/15 text-brand-blue text-xs font-bold tracking-wide mb-3;
   }
+
+  .section-title {
+    @apply text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight;
+  }
+
+  .section-subtitle {
+    @apply text-sm sm:text-base text-slate-500 max-w-2xl leading-relaxed;
+  }
+
+  .card-premium {
+    @apply bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300;
+  }
+
   .btn-primary {
-    @apply px-6 py-3 bg-brand-blue text-white font-bold rounded-full hover:bg-brand-blueDark transition-all duration-200;
+    @apply px-6 py-3 bg-brand-blue text-white font-bold rounded-xl hover:bg-brand-blueDark shadow-sm hover:shadow transition-all duration-200;
   }
-  .btn-green {
-    @apply px-6 py-3 bg-brand-green text-white font-bold rounded-full hover:opacity-90 transition-all duration-200;
+
+  .btn-cta-green {
+    @apply px-6 py-3 bg-brand-green text-white font-bold rounded-xl hover:bg-brand-greenDark shadow-sm hover:shadow transition-all duration-200;
   }
-  .card {
-    @apply bg-white rounded-2xl border border-gray-100 shadow-sm;
-  }
-}
-.ziad{
-  margin-top: -60px;
-}
-@layer components {
+
   .admin-input {
     @apply w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800
            placeholder-gray-400 bg-white focus:outline-none focus:ring-2
            focus:ring-brand-blue/30 focus:border-brand-blue transition-all;
   }
+
   .admin-label {
     @apply block text-xs font-bold text-gray-500 mb-1.5;
   }

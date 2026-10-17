@@ -1,158 +1,297 @@
 // src/sections/Hero.jsx
-import { useRef } from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import { MessageCircle, ChevronDown, ArrowLeft } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { MessageCircle, ArrowLeft, Play, Pause, ChevronRight, ChevronLeft, ShieldCheck, Factory, Award } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const WHATSAPP = "https://wa.me/201144505575?text=أريد طلب تسعير جملة";
+const WHATSAPP = "https://wa.me/201144505575?text=أريد طلب تسعير جملة لمنتجات مجموعة حكيم";
 
-// Reusable fade-up variant
-const fadeUp = (delay = 0) => ({
-  hidden: { opacity: 0, y: 36 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.75, ease: [0.22, 1, 0.36, 1], delay },
+// ── الشرائح الثلاث المستوحاة من أسلوب سيمنز الصناعي العالمي ──
+const SLIDES = [
+  {
+    id: "packaging",
+    tag: "قطاع التعبئة والتغليف · PACKAGING SOLUTIONS",
+    sector: "العبوات ومواد التعبئة",
+    title: "حلول متكاملة للعبوات البلاستيكية ومواد التعبئة والتغليف",
+    desc: "تصنيع وتوريد تشكيلة متكاملة من العبوات البلاستيكية، حاويات الأغذية، وحلول الكرتون ومواد التعبئة والتغليف لتلبية احتياجات كبرى شركات الأغذية والمصانع والموزعين.",
+    highlight: "خامات غذائية وصناعية معتمدة وتوريد مباشر بأعلى جودة",
+    image: "/hero-plastic-rv.jpg",
+    fallbackImage: "/Generated Image October 13, 2026 - 3_49PM.jpg",
+    categoryLink: "/products?category=plastic",
   },
-});
+  {
+    id: "pipes",
+    tag: "قطاع شبكات البنية التحتية · PIPES & FITTINGS",
+    sector: "مواسير وشبكات",
+    title: "أنظمة مواسير الـ PVC والـ HDPE للمشروعات الكبرى",
+    desc: "خطوط سحب وبثق عملاقة لإنتاج مواسير مياه الشرب، الصرف الصحي، وشبكات الري الزراعي المتطورة، مصنعة وفق أعلى المواصفات القياسية للجودة والمتانة.",
+    highlight: "معتمدة ومطابقة لمواصفات المشروعات القومية والبنية التحتية",
+    image: "/hero-pipes-line.jpg",
+    fallbackImage: "/Generated Image October 13, 2026 - 3_47PM.jpg",
+    categoryLink: "/products?category=pipes",
+  },
+  {
+    id: "aluminium",
+    tag: "قطاع سحب وتشكيل الألومنيوم · ALUMINIUM EXTRUSION",
+    sector: "قطاعات الألومنيوم",
+    title: "مكابس بثق وتشكيل قطاعات الألومنيوم المعمارية والصناعية",
+    desc: "أفران صهر ومكابس هيدروليكية ثقيلة لتوريد قطاعات الألومنيوم عالية المتانة لواجهات الأبراج، الإنشاءات الحديثة، والتشغيل الصناعي الدقيق.",
+    highlight: "سبائك معتمدة مع معالجة حرارية فائقة ومقاومة قصوى للعوامل الجوية",
+    image: "/hero-aluminium-press.jpg",
+    fallbackImage: "/Generated Image October 13, 2026 - 3_42PM.jpg",
+    categoryLink: "/products?category=aluminium",
+  },
+];
+
+const AUTOPLAY_INTERVAL = 6000; // 6 ثوانٍ لكل شريحة
 
 export default function Hero() {
-  const ref = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"],
-  });
-  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+  const timerRef = useRef(null);
+
+  const currentSlide = SLIDES[currentIndex];
+
+  // ── التبديل التلقائي ──
+  useEffect(() => {
+    if (isPlaying && !isHovered) {
+      timerRef.current = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
+      }, AUTOPLAY_INTERVAL);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isPlaying, isHovered, currentIndex]);
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % SLIDES.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
+  };
+
+  const togglePlay = () => {
+    setIsPlaying((prev) => !prev);
+  };
 
   return (
     <section
-      ref={ref}
       dir="rtl"
-      className="relative min-h-screen flex flex-col justify-center overflow-hidden"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="relative min-h-[92vh] lg:min-h-[95vh] flex items-center overflow-hidden bg-slate-950 pt-28 pb-32 sm:pb-36 select-none"
     >
-      {/* ── Background with parallax ── */}
-      <motion.div style={{ y: bgY }} className="absolute inset-0 -z-10">
-        {/* 
-          Replace the url() below with your real factory image:
-          url('/assets/factory-hero.jpg')
-        */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "url('hero2.jpg')",
-          }}
-        />
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0d1f3c]/85 via-[#0d1f3c]/65 to-[#0d1f3c]/90" />
-        {/* Bottom fade to white */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent" />
-      </motion.div>
+      {/* ── 1. خلفية الصورة مع z-0 لضمان ظهورها أمام لون القسم ── */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentSlide.id}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="absolute inset-0 z-0"
+        >
+          <motion.img
+            src={currentSlide.image}
+            onError={(e) => {
+              if (e.currentTarget.src.indexOf(encodeURI(currentSlide.fallbackImage)) === -1 &&
+                  e.currentTarget.src.indexOf(currentSlide.fallbackImage) === -1) {
+                e.currentTarget.src = currentSlide.fallbackImage;
+              }
+            }}
+            alt={currentSlide.title}
+            initial={{ scale: shouldReduceMotion ? 1 : 1.05 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 6, ease: "easeOut" }}
+            className="w-full h-full object-cover object-center"
+          />
 
-      {/* ── Content ── */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-10">
-        <div className="max-w-3xl">
+          {/* التدرج الاتجاهي المستوحى من سيمنز: داكن من جهة النص وشفاف تماماً جهة الماكينات */}
+          <div className="absolute inset-0 bg-gradient-to-l from-slate-950/95 via-slate-950/80 to-transparent sm:w-3/4 lg:w-3/5" />
+          
+          {/* تدرج سفلي وعلوى ناعم لحماية شريط التنقل والكبسولة السفلية */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-transparent to-slate-950/40" />
 
-          {/* منذ 1975 badge */}
-          <motion.div
-            variants={fadeUp(0.1)}
-            initial="hidden"
-            animate="visible"
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-7"
-          >
-            <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse" />
-            <span className="text-white text-sm font-semibold">منذ 1975</span>
-          </motion.div>
+          {/* شبكة هندسية فائقة الدقة لإضفاء الطابع الصناعي */}
+          <div
+            className="absolute inset-0 opacity-[0.035] pointer-events-none"
+            style={{
+              backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+              backgroundSize: "32px 32px",
+            }}
+          />
+        </motion.div>
+      </AnimatePresence>
 
-          {/* Main headline */}
-          <motion.h1
-            variants={fadeUp(0.22)}
-            initial="hidden"
-            animate="visible"
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-3"
-          >
-        نصنع الجودة...
-          </motion.h1>
-          <motion.h1
-            variants={fadeUp(0.36)}
-            initial="hidden"
-            animate="visible"
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-6"
-          >
-            <span className="text-brand-greenBright">ونبني الثقة منذ عام 1975</span>
-          </motion.h1>
+      {/* ── 2. محتوى النص الهرمي (Editorial Typography) ── */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+        <div className="max-w-2xl lg:max-w-3xl">
+          
+          {/* وسم التصنيف (Category Tag) مثل سيمنز */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`tag-${currentSlide.id}`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.35 }}
+              className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-emerald-400 mb-5 text-xs sm:text-sm font-semibold tracking-wide"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{currentSlide.tag}</span>
+            </motion.div>
+          </AnimatePresence>
 
-          {/* Sub-text */}
-          <motion.p
-            variants={fadeUp(0.5)}
-            initial="hidden"
-            animate="visible"
-            className="text-white/75 text-base sm:text-lg md:text-xl mb-10 leading-relaxed max-w-xl"
-          >
-            حلول متكاملة لقطاعات الأغذية، المواسير، والألومنيوم
-          </motion.p>
+          {/* العنوان الرئيسي الضخم والواثق */}
+          <AnimatePresence mode="wait">
+            <motion.h1
+              key={`title-${currentSlide.id}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.45, delay: 0.05 }}
+              className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.18] tracking-tight mb-5 drop-shadow-sm"
+            >
+              {currentSlide.title}
+            </motion.h1>
+          </AnimatePresence>
 
-          {/* CTA Buttons */}
-          <motion.div
-            variants={fadeUp(0.65)}
-            initial="hidden"
-            animate="visible"
-            className="flex flex-wrap gap-4 items-center"
-          >
-            {/* Pulsing WhatsApp button */}
+          {/* الوصف المركز لقطاع التصنيع */}
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={`desc-${currentSlide.id}`}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.45, delay: 0.1 }}
+              className="text-slate-200/90 text-base sm:text-lg md:text-xl leading-relaxed mb-6 font-normal max-w-2xl"
+            >
+              {currentSlide.desc}
+            </motion.p>
+          </AnimatePresence>
+
+          {/* ميزة القوة الصناعية (Highlight Pill) */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`highlight-${currentSlide.id}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, delay: 0.15 }}
+              className="flex items-center gap-2 text-xs sm:text-sm text-slate-300 font-medium mb-8"
+            >
+              <ShieldCheck size={18} className="text-emerald-400 shrink-0" />
+              <span>{currentSlide.highlight}</span>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* أزرار اتخاذ القرار (CTAs) */}
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* زر الواتساب الرئيسي */}
             <motion.a
               href={WHATSAPP}
               target="_blank"
               rel="noopener noreferrer"
-              animate={{
-                boxShadow: [
-                  "0 0 0 0px rgba(45,122,58,0.5)",
-                  "0 0 0 12px rgba(45,122,58,0.15)",
-                  "0 0 0 0px rgba(45,122,58,0)",
-                ],
-              }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut" }}
-              whileHover={{ scale: 1.06, boxShadow: "0 8px 30px rgba(45,122,58,0.5)" }}
-              whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-3 px-6 py-3.5 bg-brand-green text-white font-bold text-sm sm:text-base rounded-full border border-green-400/30"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center gap-2.5 px-6 py-3.5 bg-brand-green hover:bg-brand-greenDark text-white font-bold text-sm sm:text-base rounded-xl shadow-lg shadow-brand-green/20 transition-all duration-200"
             >
               <MessageCircle size={20} className="shrink-0" />
-              <span>طلب تسعير جملة عبر الواتساب</span>
+              <span>طلب عرض سعر عبر الواتساب</span>
             </motion.a>
 
-            {/* Secondary link */}
+            {/* زر استكشاف منتجات القطاع */}
             <Link
-              to="/products"
-              className="flex items-center gap-2 text-white/80 text-sm sm:text-base font-semibold hover:text-white transition-colors group"
+              to={currentSlide.categoryLink}
+              className="inline-flex items-center gap-2 px-6 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/25 backdrop-blur-md font-bold text-sm sm:text-base rounded-xl transition-all duration-200 group"
             >
-              <span>تصفح منتجاتنا</span>
-              <motion.span
-                animate={{ x: [0, -4, 0] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <ArrowLeft size={16} />
-              </motion.span>
+              <span>تصفح منتجات {currentSlide.sector}</span>
+              <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
             </Link>
-          </motion.div>
+          </div>
+
+          {/* إحصائيات الثقة السريعة المصغرة */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 mt-10 pt-6 border-t border-white/15 max-w-xl text-slate-300">
+            <div className="flex items-center gap-2">
+              <Factory size={16} className="text-sky-400 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold">3 مجمعات صناعية</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Award size={16} className="text-amber-400 shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold">خبرة منذ 1975</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span className="text-xs sm:text-sm font-semibold">توريد مباشر B2B</span>
+            </div>
+          </div>
 
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.4 }}
-        className="absolute bottom-36 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-white/40 text-[10px] select-none"
-      >
-        <span className="tracking-[0.2em] uppercase">Scroll</span>
-        <motion.div
-          animate={{ y: [0, 7, 0] }}
-          transition={{ duration: 1.7, repeat: Infinity, ease: "easeInOut" }}
+      {/* ── 3. كبسولة التحكم الزجاجية العائمة المستوحاة 1:1 من سيمنز (Floating Glass Dock) ── */}
+      <div className="absolute bottom-12 sm:bottom-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+        {/* زر السهم الأيمن */}
+        <button
+          onClick={handleNext}
+          aria-label="الشريحة السابقة"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all duration-200 shadow-lg hover:scale-105 active:scale-95"
         >
-          <ChevronDown size={17} />
-        </motion.div>
-      </motion.div>
+          <ChevronRight size={18} />
+        </button>
+
+        {/* الكبسولة المركزية العائمة (Dock) */}
+        <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-white/20 shadow-2xl">
+          {/* زر التشغيل / الإيقاف المؤقت (Play / Pause) مثل سيمنز */}
+          <button
+            onClick={togglePlay}
+            aria-label={isPlaying ? "إيقاف السلايدر مؤقتاً" : "تشغيل السلايدر"}
+            className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+          >
+            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+          </button>
+
+          <span className="w-[1px] h-3.5 bg-white/20" />
+
+          {/* مؤشرات الشرائح الثلاثة: كبسولة ممتدة للشريحة النشطة ونقاط للأخرى */}
+          <div className="flex items-center gap-1.5">
+            {SLIDES.map((slide, index) => {
+              const isActive = index === currentIndex;
+              return (
+                <button
+                  key={slide.id}
+                  onClick={() => setCurrentIndex(index)}
+                  aria-label={`انتقال إلى ${slide.sector}`}
+                  className="relative p-1 focus:outline-none"
+                >
+                  <motion.div
+                    animate={{
+                      width: isActive ? 28 : 8,
+                      backgroundColor: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.35)",
+                    }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="h-2 rounded-full cursor-pointer hover:bg-white/70"
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* زر السهم الأيسر */}
+        <button
+          onClick={handlePrev}
+          aria-label="الشريحة التالية"
+          className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all duration-200 shadow-lg hover:scale-105 active:scale-95"
+        >
+          <ChevronLeft size={18} />
+        </button>
+      </div>
+
     </section>
   );
 }

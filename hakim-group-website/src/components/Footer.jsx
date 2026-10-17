@@ -1,78 +1,74 @@
 // src/components/Footer.jsx
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Phone, MapPin, Mail, Share2, MessageSquare, Camera } from "lucide-react";
+import { Phone, MapPin, Mail, MessageCircle, ArrowUpRight } from "lucide-react";
+import logo from "../assets/product_1079686086__employee.png";
 
-const WHATSAPP = "https://wa.me/201144505575";
+const WHATSAPP = "https://wa.me/201144505575?text=أريد طلب تسعير";
 
 const quickLinks = [
   { label: "الصفحة الرئيسية", to: "/" },
-  { label: "عن الشركة",       to: "/about" },
-  { label: "المنتجات",         to: "/products" },
+  { label: "عن المجموعة",      to: "/about" },
+  { label: "كتالوج المنتجات",  to: "/products" },
   { label: "الجودة والسلامة", to: "/quality" },
-  { label: "شهاداتنا",         to: "/certificates" },
-  { label: "اتصل بنا",         to: "/contact" },
+  { label: "شهادات الاعتماد", to: "/certificates" },
+  { label: "تواصل معنا",      to: "/contact" },
 ];
 
 const sectors = [
-  { label: "التغليف الغذائي" },
-  { label: "مواسير PVC & HDPE" },
-  { label: "بروفيلات الألومنيوم" },
-  { label: "كتالوج المنتجات" },
+  { label: "قطاع البلاستيك والتغليف", to: "/products?category=بلاستيك" },
+  { label: "مواسير PVC & HDPE وشبكات البنية", to: "/products?category=مواسير" },
+  { label: "بروفيلات الألومنيوم المعمارية والصناعية", to: "/aluminium" },
+  { label: "طلب تصنيع مواصفات خاصة", to: "/contact" },
 ];
 
 export default function Footer() {
   return (
-    <footer dir="rtl" className="bg-brand-blue text-white pt-14 pb-6">
+    <footer dir="rtl" className="bg-[#f8fafc] text-slate-700 border-t border-slate-200/80 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Top Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-12 mb-14">
 
-          {/* Brand */}
-          <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-            <Link to="/" className="flex items-center gap-2 mb-4 w-fit">
-              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center select-none">
-                <div className="flex flex-col items-center leading-none">
-                  <span className="text-[10px] font-black text-brand-blue tracking-tighter">HG</span>
-                  <span className="text-[4.5px] font-bold text-brand-green">Hakim Group</span>
-                </div>
+          {/* Column 1: Company Profile */}
+          <div className="flex flex-col">
+            <Link to="/" className="flex items-center gap-3 mb-4">
+              <img
+                src={logo}
+                alt="شعار مجموعة حكيم"
+                className="h-12 w-auto object-contain"
+              />
+              <div className="flex flex-col border-r border-slate-200 pr-3">
+                <span className="text-base font-black text-brand-blue tracking-tight">
+                  مجموعة حكيم
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
+                  HAKIM GROUP · منذ 1975
+                </span>
               </div>
-              <span className="text-white font-extrabold text-sm">حكيم جروب</span>
             </Link>
-            <p className="text-blue-200 text-sm leading-relaxed mb-5">
-              شركاؤكم في التعبئة والتغليف منذ عام 1975. حلول متكاملة لقطاعات الأغذية والمواسير والألومنيوم.
+
+            <p className="text-slate-600 text-sm leading-relaxed mb-6 font-normal">
+              صرح صناعي رائد في مصر والشرق الأوسط منذ عام 1975. نقدم حلولاً إنتاجية متقدمة في قطاعات البلاستيك، شبكات البنية التحتية، وبروفيلات الألومنيوم بأعلى مواصفات هندسية.
             </p>
-            <div className="flex gap-3">
-              {[
-                { icon: Share2,        href: "#" },
-                { icon: MessageSquare, href: "#" },
-                { icon: Camera,        href: "#" },
-              ].map(({ icon: Icon, href }, i) => (
-                <motion.a
-                  key={i}
-                  href={href}
-                  whileHover={{ scale: 1.15, backgroundColor: "rgba(255,255,255,0.2)" }}
-                  whileTap={{ scale: 0.92 }}
-                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center transition-colors"
-                >
-                  <Icon size={15} />
-                </motion.a>
-              ))}
+
+            <div className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 bg-white border border-slate-200/90 rounded-lg px-3 py-1.5 w-fit">
+              <span className="w-2 h-2 rounded-full bg-brand-green" />
+              <span>مجمعات العاشر من رمضان الصناعية</span>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Column 2: Quick Links */}
           <div>
-            <h4 className="font-bold text-sm mb-4 text-white border-r-2 border-brand-green pr-2">
-              روابط سريعة
+            <h4 className="font-bold text-sm text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center justify-between">
+              <span>روابط سريعة</span>
+              <span className="w-2 h-2 rounded-full bg-brand-blue" />
             </h4>
             <ul className="space-y-2.5">
               {quickLinks.map((l) => (
                 <li key={l.to}>
                   <Link
                     to={l.to}
-                    className="text-blue-200 text-sm hover:text-white transition-colors hover:translate-x-1 inline-block transition-transform"
+                    className="text-slate-600 text-sm hover:text-brand-blue hover:translate-x-1 inline-block transition-all duration-150 font-medium"
                   >
                     {l.label}
                   </Link>
@@ -81,17 +77,18 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Sectors */}
+          {/* Column 3: Industrial Sectors */}
           <div>
-            <h4 className="font-bold text-sm mb-4 text-white border-r-2 border-brand-green pr-2">
-              قطاعاتنا
+            <h4 className="font-bold text-sm text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center justify-between">
+              <span>القطاعات الإنتاجية</span>
+              <span className="w-2 h-2 rounded-full bg-brand-blue" />
             </h4>
             <ul className="space-y-2.5">
               {sectors.map((s) => (
                 <li key={s.label}>
                   <Link
-                    to="/products"
-                    className="text-blue-200 text-sm hover:text-white transition-colors"
+                    to={s.to}
+                    className="text-slate-600 text-sm hover:text-brand-blue hover:translate-x-1 inline-block transition-all duration-150 font-medium"
                   >
                     {s.label}
                   </Link>
@@ -100,56 +97,63 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Column 4: Contact & Fast B2B Quotes */}
           <div>
-            <h4 className="font-bold text-sm mb-4 text-white border-r-2 border-brand-green pr-2">
-              تواصل معنا
+            <h4 className="font-bold text-sm text-slate-900 mb-4 pb-2 border-b border-slate-200 flex items-center justify-between">
+              <span>تواصل مع الإدارة</span>
+              <span className="w-2 h-2 rounded-full bg-brand-green" />
             </h4>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2 text-blue-200 text-sm">
-                <MapPin size={15} className="mt-0.5 shrink-0 text-brand-greenBright" />
-                <span>مدينة نصر / العاشر من رمضان، مصر</span>
+
+            <ul className="space-y-3 mb-6">
+              <li className="flex items-start gap-2.5 text-slate-600 text-sm">
+                <MapPin size={16} className="mt-0.5 shrink-0 text-brand-blue" />
+                <span>المنطقة الصناعية، العاشر من رمضان / القاهرة، مصر</span>
               </li>
               <li>
                 <a
-                  href="tel:+201234567890"
-                  className="flex items-center gap-2 text-blue-200 text-sm hover:text-white transition-colors"
+                  href="tel:01144505575"
+                  className="flex items-center gap-2.5 text-slate-600 text-sm hover:text-brand-blue transition-colors font-medium"
                 >
-                  <Phone size={15} className="shrink-0 text-brand-greenBright" />
-                  <span>01144505575</span>
+                  <Phone size={16} className="shrink-0 text-brand-blue" />
+                  <span dir="ltr">01144505575</span>
                 </a>
               </li>
               <li>
                 <a
                   href="mailto:info@hakimgroup.com"
-                  className="flex items-center gap-2 text-blue-200 text-sm hover:text-white transition-colors"
+                  className="flex items-center gap-2.5 text-slate-600 text-sm hover:text-brand-blue transition-colors font-medium"
                 >
-                  <Mail size={15} className="shrink-0 text-brand-greenBright" />
+                  <Mail size={16} className="shrink-0 text-brand-blue" />
                   <span>info@hakimgroup.com</span>
                 </a>
               </li>
             </ul>
 
-            {/* WhatsApp CTA */}
-            <motion.a
+            {/* Direct WhatsApp Quote Button */}
+            <a
               href={WHATSAPP}
               target="_blank"
               rel="noopener noreferrer"
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              className="mt-5 flex items-center justify-center gap-2 w-full py-2.5 bg-brand-green text-white text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
+              className="inline-flex items-center justify-center gap-2 w-full py-3 bg-brand-green text-white text-sm font-bold rounded-xl shadow-sm hover:bg-brand-greenDark transition-colors"
             >
-              واتساب المبيعات الموحد
-            </motion.a>
-            <p className="text-center text-blue-300 text-xs mt-1">13563</p>
+              <MessageCircle size={16} />
+              <span>طلب تسعير جملة عبر الواتساب</span>
+              <ArrowUpRight size={14} className="opacity-75" />
+            </a>
+          </div>
+
+        </div>
+
+        {/* Bottom Sub-footer */}
+        <div className="border-t border-slate-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-medium">
+          <p>© {new Date().getFullYear()} مجموعة حكيم الصناعية (Hakim Group). جميع الحقوق محفوظة.</p>
+          <div className="flex items-center gap-6">
+            <Link to="/about" className="hover:text-brand-blue transition-colors">عن المجموعة</Link>
+            <Link to="/products" className="hover:text-brand-blue transition-colors">المنتجات</Link>
+            <Link to="/contact" className="hover:text-brand-blue transition-colors">اتصل بنا</Link>
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-white/15 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-blue-300 text-xs">
-          <p>جميع الحقوق محفوظة لحكيم جروب © 2026</p>
-          <p>تصميم وتطوير بواسطة فريق حكيم التقني</p>
-        </div>
       </div>
     </footer>
   );

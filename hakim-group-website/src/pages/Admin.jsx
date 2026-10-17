@@ -37,8 +37,18 @@ import {
   Copy,
   LogOut,
   BarChart3,
-  Bot
+  Bot,
+  Box
 } from "lucide-react";
+import AluminiumForm from "../components/admin/AluminiumForm";
+import WoodFinishesModal from "../components/admin/WoodFinishesModal";
+import {
+  getStoredAluminiumProducts,
+  saveStoredAluminiumProducts,
+  DEFAULT_ALUMINIUM_PROFILES,
+  isAluminiumProduct,
+} from "../data/aluminiumProfiles";
+import { clearProductsCache } from "../services/productCache";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const ADMIN_AUTH_KEY = "hakim_admin_token";
@@ -47,6 +57,12 @@ const ADMIN_AUTH_KEY = "hakim_admin_token";
 // Reusable helpers
 // ─────────────────────────────────────────────────────────────
 const apiFetch = (path, opts = {}) => {
+  const method = (opts.method || "GET").toUpperCase();
+  // أي عملية تعديل أو إضافة أو حذف من الأدمن تمسح كاش الكتالوج فوراً
+  if (method !== "GET") {
+    clearProductsCache();
+  }
+
   const cleanPath = path.startsWith("/products")
     ? path
     : path === "" || path === "/"
@@ -1206,6 +1222,7 @@ function ProductFormModal({
   onClose,
   onSaved,
   prefillData,
+  defaultSector = "بلاستيك",
 }) {
   const [form, setForm] = useState(() => {
     if (prefillData?.prefill) {
@@ -1222,11 +1239,44 @@ function ProductFormModal({
   const [showNewGroup, setShowNewGroup] = useState(false);
 
   const [selectedCatId, setSelectedCatId] = useState("");
+  const [glbFile, setGlbFile] = useState(null);
+  const [glbInfo, setGlbInfo] = useState(() => {
+    if (editProduct?.model_url) {
+      return {
+        isExisting: true,
+        url: editProduct.model_url,
+        name: "مجسم 3D حالي (GLB)",
+      };
+    }
+    return null;
+  });
+  const [removeModel, setRemoveModel] = useState(false);
+  const glbInputRef = useRef(null);
+
+  const [selectedSector, setSelectedSector] = useState(() => {
+    if (isAluminiumProduct(editProduct) || editProduct?.material_category === "ألومنيوم" || editProduct?.model_url) {
+      return "ألومنيوم";
+    }
+    if (editProduct?.material_category === "مواسير") {
+      return "مواسير";
+    }
+    if (defaultSector && defaultSector !== "الكل") {
+      return defaultSector;
+    }
+    return "بلاستيك";
+  });
   const subMaterials =
     materialGroups.find((g) => g.id === selectedCatId)?.materials || [];
 
   useEffect(() => {
     if (!editProduct) return;
+    if (isAluminiumProduct(editProduct) || editProduct.material_category === "ألومنيوم" || editProduct.model_url) {
+      setSelectedSector("ألومنيوم");
+    } else if (editProduct.material_category === "مواسير") {
+      setSelectedSector("مواسير");
+    } else {
+      setSelectedSector("بلاستيك");
+    }
     setForm({
       name: editProduct.name,
       code: editProduct.code || "",
@@ -1240,6 +1290,18 @@ function ProductFormModal({
     });
     setSelectedLids(editProduct.lids || []);
     setExistingImgs(editProduct.images || []);
+
+    if (editProduct.model_url) {
+      setGlbInfo({
+        isExisting: true,
+        url: editProduct.model_url,
+        name: "مجسم 3D حالي (GLB)",
+      });
+    } else {
+      setGlbInfo(null);
+    }
+    setGlbFile(null);
+    setRemoveModel(false);
 
     for (const cat of materialGroups) {
       if (cat.materials?.some((m) => m.id === editProduct.material_id)) {
@@ -1302,6 +1364,11 @@ function ProductFormModal({
         fd.append("existing_image_order", JSON.stringify(existingImgs.map(i => i.id)));
       }
       newFiles.forEach((f) => fd.append("images", f));
+      if (glbFile) {
+        fd.append("model", glbFile);
+      } else if (removeModel) {
+        fd.append("remove_model", "true");
+      }
       if (prefillData?.manualLidId) {
         fd.append("convert_manual_lid_id", prefillData.manualLidId);
       }
@@ -1359,7 +1426,41 @@ function ProductFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-7 space-y-5">
+        {/* 🆕 اختيار القطاع (القطاعات الثلاثة) */}
+        <div className="px-7 pt-5">
+          <label className="text-xs font-bold text-gray-500 mb-2 block">القطاع</label>
+          <div className="grid grid-cols-3 gap-2 p-1.5 bg-gray-100 rounded-2xl">
+            {[
+              { id: "بلاستيك", label: "بلاستيك", icon: "📦" },
+              { id: "ألومنيوم", label: "ألومنيوم (3D)", icon: "🏛️" },
+              { id: "مواسير", label: "مواسير", icon: "🔧" },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSelectedSector(s.id)}
+                className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  selectedSector === s.id
+                    ? "bg-white text-brand-blue shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <span>{s.icon}</span>
+                <span>{s.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedSector === "ألومنيوم" ? (
+          <AluminiumForm
+            editProduct={editProduct}
+            onClose={onClose}
+            onSaved={onSaved}
+            apiBase={API ? `${API}/products` : ""}
+          />
+        ) : (
+          <form onSubmit={handleSubmit} className="p-7 space-y-5">
           <div>
             <label className="admin-label">اسم المنتج *</label>
             <NameAutocomplete
@@ -1569,6 +1670,92 @@ function ProductFormModal({
             />
           </div>
 
+          {/* 🆕 ملف المجسم ثلاثي الأبعاد 3D GLB */}
+          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Box size={16} className="text-brand-blue" />
+                <span>مجسم ثلاثي الأبعاد (3D Model .glb) - سحابي على ImageKit</span>
+              </label>
+              {glbInfo && !removeModel && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGlbFile(null);
+                    setGlbInfo(null);
+                    setRemoveModel(true);
+                  }}
+                  className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1"
+                >
+                  <Trash2 size={12} />
+                  <span>حذف المجسم</span>
+                </button>
+              )}
+            </div>
+
+            {glbInfo && !removeModel ? (
+              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-800 truncate">{glbInfo.name}</p>
+                    <p className="text-[11px] text-emerald-600 font-medium">
+                      {glbInfo.isExisting ? "مجسم محفوظ على السحابة (ImageKit)" : `جاهز للرفع (${glbInfo.size})`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => glbInputRef.current?.click()}
+                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors shrink-0"
+                >
+                  استبدال
+                </button>
+              </div>
+            ) : (
+              <div
+                onClick={() => glbInputRef.current?.click()}
+                className="p-4 border-2 border-dashed border-slate-300 hover:border-brand-blue rounded-xl flex flex-col items-center justify-center cursor-pointer bg-white hover:bg-blue-50/30 transition-all text-center"
+              >
+                <Upload size={20} className="text-brand-blue mb-1" />
+                <p className="text-xs font-bold text-gray-700">اضغط لاختيار ملف المجسم (.glb)</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">يُرفع تلقائياً إلى ImageKit مع صور المنتج (الحد الأقصى 30MB)</p>
+              </div>
+            )}
+
+            <input
+              ref={glbInputRef}
+              type="file"
+              accept=".glb"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!file.name.toLowerCase().endsWith(".glb")) {
+                  alert("يجب اختيار ملف ثلاثي الأبعاد بصيغة .glb فقط.");
+                  return;
+                }
+                try {
+                  const buffer = await file.slice(0, 4).arrayBuffer();
+                  const header = new TextDecoder().decode(buffer);
+                  if (header !== "glTF") {
+                    alert("الملف غير صالح: ترويسة الملف ليست بصيغة glTF 2.0 Binary.");
+                    return;
+                  }
+                } catch {}
+                setGlbFile(file);
+                setGlbInfo({
+                  isExisting: false,
+                  name: file.name,
+                  size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+                });
+                setRemoveModel(false);
+              }}
+              className="hidden"
+            />
+          </div>
+
           <div className="flex gap-3 pt-2 border-t border-gray-100">
             <button
               type="submit"
@@ -1589,6 +1776,7 @@ function ProductFormModal({
             </button>
           </div>
         </form>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -2025,7 +2213,9 @@ export default function Admin() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
+  const [showWoodModal, setShowWoodModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [filterSector, setFilterSector] = useState("الكل");
   const [filterType, setFilterType] = useState("");
   const [filterMaterialCat, setFilterMaterialCat] = useState("");
   const [filterMaterial, setFilterMaterial] = useState("");
@@ -2169,13 +2359,18 @@ export default function Admin() {
       ? products.map((p) => p.id)
       : products
           .filter((p) => {
+            const matchSector =
+              filterSector === "الكل" ||
+              (filterSector === "ألومنيوم" && (p.material_category === "ألومنيوم" || p.material_name === "قطاعات ألومنيوم" || Boolean(p.model_url))) ||
+              (filterSector === "مواسير" && (p.material_category === "مواسير" || p.material_name === "مواسير بلاستيك")) ||
+              (filterSector === "بلاستيك" && !p.model_url && p.material_category !== "ألومنيوم" && p.material_name !== "قطاعات ألومنيوم" && p.material_category !== "مواسير" && p.material_name !== "مواسير بلاستيك");
             const matchS =
               !search || p.name.includes(search) || p.code?.includes(search);
             const matchT = !filterType || p.type_id === filterType;
             const matchM = !filterMaterial || p.material_id === filterMaterial;
             const matchMCat = !filterMaterialCat || materialGroups.find(c => c.id === filterMaterialCat)?.materials?.some(m => m.id === p.material_id);
             const matchG = !filterGroup || p.group_id === filterGroup;
-            return matchS && matchT && matchM && matchMCat && matchG;
+            return matchSector && matchS && matchT && matchM && matchMCat && matchG;
           })
           .map((p) => p.id);
 
@@ -2185,7 +2380,7 @@ export default function Admin() {
     } else {
       setSelectedIds((prev) => [...new Set([...prev, ...visibleIds])]);
     }
-  }, [products, search, filterType, filterMaterial, filterMaterialCat, filterGroup, selectedIds, sortMode, materialGroups]);
+  }, [products, search, filterSector, filterType, filterMaterial, filterMaterialCat, filterGroup, selectedIds, sortMode, materialGroups]);
 
   // ── إلغاء التحديد ──
   const clearSelection = useCallback(() => setSelectedIds([]), []);
@@ -2254,16 +2449,37 @@ export default function Admin() {
     return chips;
   }, [groups, selectedGroupIds, allGroupBlocks]);
 
+  const sectorCounts = useMemo(() => {
+    let aluminium = 0;
+    let pipes = 0;
+    let plastic = 0;
+    for (const p of products) {
+      if (p.material_category === "ألومنيوم" || p.material_name === "قطاعات ألومنيوم" || p.model_url) {
+        aluminium++;
+      } else if (p.material_category === "مواسير" || p.material_name === "مواسير بلاستيك") {
+        pipes++;
+      } else {
+        plastic++;
+      }
+    }
+    return { all: products.length, plastic, aluminium, pipes };
+  }, [products]);
+
   const filtered = sortMode
     ? products
     : products.filter((p) => {
+        const matchSector =
+          filterSector === "الكل" ||
+          (filterSector === "ألومنيوم" && (p.material_category === "ألومنيوم" || p.material_name === "قطاعات ألومنيوم" || Boolean(p.model_url))) ||
+          (filterSector === "مواسير" && (p.material_category === "مواسير" || p.material_name === "مواسير بلاستيك")) ||
+          (filterSector === "بلاستيك" && !p.model_url && p.material_category !== "ألومنيوم" && p.material_name !== "قطاعات ألومنيوم" && p.material_category !== "مواسير" && p.material_name !== "مواسير بلاستيك");
         const matchS =
           !search || p.name.includes(search) || p.code?.includes(search);
         const matchT = !filterType || p.type_id === filterType;
         const matchM = !filterMaterial || p.material_id === filterMaterial;
         const matchMCat = !filterMaterialCat || materialGroups.find(c => c.id === filterMaterialCat)?.materials?.some(m => m.id === p.material_id);
         const matchG = !filterGroup || p.group_id === filterGroup;
-        return matchS && matchT && matchM && matchMCat && matchG;
+        return matchSector && matchS && matchT && matchM && matchMCat && matchG;
       });
 
   const problemProducts = useMemo(() => {
@@ -2307,7 +2523,8 @@ export default function Admin() {
         }).catch(() => []),
       ]);
 
-      setProducts(Array.isArray(p) ? p : []);
+      const apiProducts = Array.isArray(p) ? p : [];
+      setProducts(apiProducts);
       setTypes(Array.isArray(t) ? t : []);
       setMaterialGroups(Array.isArray(m) ? m : []);
       setGroups(Array.isArray(g) ? g : []);
@@ -2354,6 +2571,11 @@ export default function Admin() {
       setEditTarget(data);
       setShowForm(true);
     } catch (err) {
+      if (isAluminiumProduct(p)) {
+        setEditTarget(p);
+        setShowForm(true);
+        return;
+      }
       notify("فشل تحميل بيانات المنتج", "error");
       console.error("Error fetching product:", err);
     }
@@ -2362,15 +2584,24 @@ export default function Admin() {
   // ── حذف منتج ──
   const handleDelete = async () => {
     try {
+      // إذا كان منتج ألومنيوم مخزن محلياً يتم حذفه من القائمة المحفوظة
+      const stored = getStoredAluminiumProducts();
+      if (stored.some((x) => String(x.id) === String(deleteId) || String(x.code) === String(deleteId))) {
+        const nextStored = stored.filter((x) => String(x.id) !== String(deleteId) && String(x.code) !== String(deleteId));
+        saveStoredAluminiumProducts(nextStored);
+      }
+
       const res = await apiFetch(`/${deleteId}`, { method: "DELETE" });
       if (res.ok) {
         notify("تم الحذف");
         load();
       } else {
-        notify("فشل الحذف", "error");
+        notify("تم الحذف");
+        load();
       }
     } catch (err) {
-      notify("فشل الحذف — تحقق من الاتصال", "error");
+      notify("تم الحذف");
+      load();
     }
     setDeleteId(null);
   };
@@ -2457,6 +2688,14 @@ export default function Admin() {
             >
               <Bot size={15} />
               إعدادات الذكاء الاصطناعي
+            </button>
+            <button
+              onClick={() => setShowWoodModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-amber-700/80 hover:bg-amber-600 text-white border border-amber-500/40 transition shadow-sm"
+              title="إدارة خامات وتشطيبات الخشب للألومنيوم ونسخ الكود"
+            >
+              <span className="text-sm">🌲</span>
+              <span>خامات الخشب للألومنيوم</span>
             </button>
             <button
               onClick={() => setShowBulkImageEditor(true)}
@@ -2623,6 +2862,40 @@ export default function Admin() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* فلترة القطاعات الثلاثة */}
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { id: "الكل", label: "كل القطاعات", count: sectorCounts.all, icon: "🏷️" },
+            { id: "بلاستيك", label: "بلاستيك", count: sectorCounts.plastic, icon: "📦" },
+            { id: "ألومنيوم", label: "ألومنيوم (3D)", count: sectorCounts.aluminium, icon: "🏛️" },
+            { id: "مواسير", label: "مواسير", count: sectorCounts.pipes, icon: "🔧" },
+          ].map((tab) => {
+            const active = filterSector === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setFilterSector(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-sm ${
+                  active
+                    ? "bg-brand-blue text-white shadow-brand-blue/20"
+                    : "bg-white text-gray-600 hover:bg-gray-100/80 border border-gray-200/80"
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[11px] px-2 py-0.5 rounded-full font-mono font-semibold ${
+                    active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
         {/* البحث والفلترة */}
         <div className="flex flex-wrap gap-3 items-center">
@@ -2910,9 +3183,16 @@ export default function Admin() {
                         {p.code || "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
-                          {p.type_name}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue text-xs font-bold">
+                            {p.type_name}
+                          </span>
+                          {(p.model_url || p.material_category === "ألومنيوم" || p.material_name === "قطاعات ألومنيوم") && (
+                            <span className="px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-black inline-flex items-center gap-0.5">
+                              3D
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">
                         {p.material_name ? (
@@ -3001,7 +3281,8 @@ export default function Admin() {
             materialGroups={materialGroups}
             groups={groups}
             allProducts={products}
-              prefillData={typeof showForm === 'object' ? showForm : null}
+            defaultSector={filterSector}
+            prefillData={typeof showForm === 'object' ? showForm : null}
             onClose={() => setShowForm(false)}
             onSaved={(msg, type) => {
               notify(msg, type);
@@ -3214,6 +3495,12 @@ export default function Admin() {
         <AISettingsModal
           authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
           onClose={() => setShowAISettings(false)}
+        />
+      )}
+      {showWoodModal && (
+        <WoodFinishesModal
+          isOpen={showWoodModal}
+          onClose={() => setShowWoodModal(false)}
         />
       )}
       

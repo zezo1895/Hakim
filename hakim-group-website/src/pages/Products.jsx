@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Flame, Snowflake, Layers, Tag as TagIcon, ChevronLeft, ChevronRight, ZoomIn, Search, X } from "lucide-react";
 import Loader from "../components/Loader";
+import { getCachedProducts } from "../services/productCache";
+import { isAluminiumProduct } from "./AluminiumCatalog";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const ITEMS_PER_PAGE = 21;
@@ -41,10 +43,10 @@ function FilterRow({ label, options, active, onChange, displayMapper }) {
             onClick={() => onChange(c)}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition-all ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               active === c
-                ? "bg-brand-blue text-white shadow"
-                : "bg-white text-gray-600 border border-gray-200 hover:border-brand-blue hover:text-brand-blue"
+                ? "bg-brand-blue text-white shadow-sm"
+                : "bg-white text-slate-600 border border-slate-200 hover:border-brand-blue hover:text-brand-blue"
             }`}
           >
             {displayMapper ? displayMapper(c) : c}
@@ -135,18 +137,36 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // قراءة القطاع (الفئة الرئيسية) من رابط الصفحة، لو جاي من كروت "قطاعاتنا" في الرئيسية
+  // قراءة القطاع والفلاتر ورقم الصفحة من الرابط أو من sessionStorage لحفظ مكان المستخدم بدقة عند الرجوع
   const [searchParams, setSearchParams] = useSearchParams();
-  const categoryFromUrl = searchParams.get("category") || "الكل";
 
-  // الفلاتر
-  const [activeCategory, setActiveCategory] = useState(categoryFromUrl);
-  const [activeMaterial, setActiveMaterial] = useState("الكل");
-  const [activeType, setActiveType] = useState("الكل");
-  const [searchTerm, setSearchTerm] = useState("");
+  const getInitialState = () => {
+    let saved = {};
+    try {
+      saved = JSON.parse(sessionStorage.getItem("hakim_catalog_state") || "{}");
+    } catch (e) {}
 
-  // الترقيم (Pagination)
-  const [currentPage, setCurrentPage] = useState(1);
+    const urlCat = searchParams.get("category");
+    const urlPage = parseInt(searchParams.get("page"), 10);
+    const urlMat = searchParams.get("material");
+    const urlType = searchParams.get("type");
+    const urlQuery = searchParams.get("q");
+
+    return {
+      category: urlCat !== null ? urlCat : (saved.category || "الكل"),
+      page: urlPage && !isNaN(urlPage) && urlPage > 0 ? urlPage : (saved.page || 1),
+      material: urlMat !== null ? urlMat : (saved.material || "الكل"),
+      type: urlType !== null ? urlType : (saved.type || "الكل"),
+      search: urlQuery !== null ? urlQuery : (saved.search || ""),
+    };
+  };
+
+  const [initial] = useState(getInitialState);
+  const [activeCategory, setActiveCategory] = useState(initial.category);
+  const [activeMaterial, setActiveMaterial] = useState(initial.material);
+  const [activeType, setActiveType] = useState(initial.type);
+  const [searchTerm, setSearchTerm] = useState(initial.search);
+  const [currentPage, setCurrentPage] = useState(initial.page);
 
   // قوائم الفئات والخامات والأنواع المستخرجة من البيانات
   const [categoriesList, setCategoriesList] = useState(["الكل"]);
@@ -161,57 +181,107 @@ export default function Products() {
     return mat; 
   };
 
-  // لو المستخدم غيّر رابط الصفحة (مثلاً رجع من كارت قطاع تاني) نحدّث الفلتر
-  useEffect(() => {
-    setActiveCategory(categoryFromUrl);
-  }, [categoryFromUrl]);
+  // مزامنة الحالة مع عنوان الرابط ومع الذاكرة المؤقتة للجلسة (sessionStorage)
+  const syncStateToUrl = (newCat, newMat, newType, newSearch, newPage) => {
+    const params = {};
+    if (newCat && newCat !== "الكل") params.category = newCat;
+    if (newMat && newMat !== "الكل") params.material = newMat;
+    if (newType && newType !== "الكل") params.type = newType;
+    if (newSearch && newSearch.trim()) params.q = newSearch.trim();
+    if (newPage && newPage > 1) params.page = String(newPage);
 
-  // أي تغيير في الفلاتر أو البحث يرجّع الترقيم للصفحة الأولى تلقائيًا
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategory, activeMaterial, activeType, searchTerm]);
+    setSearchParams(params, { replace: true });
 
-  // تغيير فلتر الفئة يحدّث الرابط كمان عشان يفضل قابل للمشاركة
-  const handleCategoryChange = (c) => {
-    setActiveCategory(c);
-    if (c === "الكل") {
-      searchParams.delete("category");
-      setSearchParams(searchParams);
-    } else {
-      setSearchParams({ category: c });
-    }
+    try {
+      sessionStorage.setItem(
+        "hakim_catalog_state",
+        JSON.stringify({
+          category: newCat,
+          material: newMat,
+          type: newType,
+          search: newSearch,
+          page: newPage,
+        })
+      );
+    } catch (e) {}
   };
 
-  // جلب المنتجات من قاعدة البيانات
+  // تغيير الفلاتر يعيد الصفحة للأولى تلقائياً ويحدّث الرابط
+  const handleCategoryChange = (c) => {
+    setActiveCategory(c);
+    setCurrentPage(1);
+    syncStateToUrl(c, activeMaterial, activeType, searchTerm, 1);
+  };
+
+  const handleMaterialChange = (m) => {
+    setActiveMaterial(m);
+    setCurrentPage(1);
+    syncStateToUrl(activeCategory, m, activeType, searchTerm, 1);
+  };
+
+  const handleTypeChange = (t) => {
+    setActiveType(t);
+    setCurrentPage(1);
+    syncStateToUrl(activeCategory, activeMaterial, t, searchTerm, 1);
+  };
+
+  const handleSearchChange = (val) => {
+    setSearchTerm(val);
+    setCurrentPage(1);
+    syncStateToUrl(activeCategory, activeMaterial, activeType, val, 1);
+  };
+
+  const handlePageChange = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    syncStateToUrl(activeCategory, activeMaterial, activeType, searchTerm, page);
+    document.getElementById("products-grid-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // لو الرابط اتغير من الخارج (مثلاً الضغط على رابط قطاع من الهيرو)
+  const categoryFromUrl = searchParams.get("category");
   useEffect(() => {
+    if (categoryFromUrl && categoryFromUrl !== activeCategory) {
+      setActiveCategory(categoryFromUrl);
+      setCurrentPage(1);
+      syncStateToUrl(categoryFromUrl, activeMaterial, activeType, searchTerm, 1);
+    }
+  }, [categoryFromUrl]);
+
+  // جلب المنتجات باستخدام الكاش الذكي (تحميل فوري 0ms عند التردد بين الصفحات)
+  useEffect(() => {
+    let isMounted = true;
     const fetchProducts = async () => {
       try {
-        setLoading(true);
-        const response = await fetch(`${API}/products`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch products: ${response.status}`);
-        }
-        const data = await response.json();
-        setProducts(Array.isArray(data) ? data : []);
+        const data = await getCachedProducts(API);
+        if (!isMounted) return;
+
+        // استبعاد قطاعات الألومنيوم من كتالوج البلاستيك ومواد التعبئة (لأن لها كتالوج مستقل على /aluminium)
+        const packagingProducts = Array.isArray(data)
+          ? data.filter((p) => !isAluminiumProduct(p))
+          : [];
+        setProducts(packagingProducts);
         
-        // استخراج قوائم الفئات والخامات والأنواع الفريدة
-        if (Array.isArray(data) && data.length > 0) {
-          const cats = [...new Set(data.map(p => p.material_category).filter(Boolean))];
-          const materials = [...new Set(data.map(p => p.material_name).filter(Boolean))];
-          const types = [...new Set(data.map(p => p.type_name).filter(Boolean))];
+        // استخراج قوائم الفئات والخامات والأنواع الفريدة الخاصة بمنتجات التعبئة فقط
+        if (packagingProducts.length > 0) {
+          const cats = [...new Set(packagingProducts.map(p => p.material_category).filter(Boolean))];
+          const materials = [...new Set(packagingProducts.map(p => p.material_name).filter(Boolean))];
+          const types = [...new Set(packagingProducts.map(p => p.type_name).filter(Boolean))];
           setCategoriesList(["الكل", ...cats]);
           setMaterialsList(["الكل", ...materials]);
           setTypesList(["الكل", ...types]);
         }
       } catch (err) {
+        if (!isMounted) return;
         console.error("Error fetching products:", err);
         setError("فشل تحميل المنتجات. يرجى المحاولة مرة أخرى.");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchProducts();
+    return () => { isMounted = false; };
   }, []);
 
   // تصفية المنتجات
@@ -247,13 +317,6 @@ export default function Products() {
     return () => clearTimeout(handler);
   }, [normalizedSearch, filtered.length]);
 
-  const handlePageChange = (page) => {
-    if (page < 1 || page > totalPages) return;
-    setCurrentPage(page);
-    // نرجع لأعلى قائمة المنتجات (مش أعلى الصفحة كلها) عشان تجربة أنعم
-    document.getElementById("products-grid-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   // عرض حالة التحميل
   if (loading) {
     return <Loader label="جاري تحميل المنتجات" />;
@@ -279,19 +342,19 @@ export default function Products() {
   }
 
   return (
-    <div dir="rtl" className="pt-20 min-h-screen bg-gray-50">
-      <section className="bg-brand-blue text-white py-16 px-4 sm:px-6 lg:px-8">
+    <div dir="rtl" className="pt-20 min-h-screen bg-[#f8fafc]">
+      <section className="bg-white border-b border-slate-200/80 py-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <span className="inline-block px-4 py-1 rounded-full bg-white/10 text-xs font-bold mb-4">
+          <span className="section-badge">
             الكتالوج الرقمي
           </span>
-          <h1 className="text-3xl sm:text-4xl font-black mb-3">
-            {activeCategory === "الكل" ? "كتالوج المنتجات" : `كتالوج ${activeCategory}`}
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mb-3">
+            {activeCategory === "الكل" ? "كتالوج المنتجات الصناعية" : `كتالوج ${activeCategory}`}
           </h1>
-          <p className="text-blue-200 text-sm sm:text-base">
-            تصفح منتجاتنا من البلاستيك والكرتون والفوم بالأنواع والمقاسات والمواصفات الكاملة
+          <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+            تصفح منتجات مجموعة حكيم في قطاعات البلاستيك، المواسير، والألومنيوم بالمواصفات الفنية والمقاسات الكاملة.
           </p>
-          <p className="text-blue-300 text-xs mt-2">
+          <p className="text-slate-400 text-xs mt-2 font-medium">
             {products.length} منتج متاح
           </p>
         </div>
@@ -305,13 +368,13 @@ export default function Products() {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="ابحث باسم المنتج أو الكود..."
               className="w-full bg-white border border-gray-200 rounded-2xl py-3 pr-11 pl-10 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-blue/40 focus:border-brand-blue transition"
             />
             {searchTerm && (
               <button
-                onClick={() => setSearchTerm("")}
+                onClick={() => handleSearchChange("")}
                 className="absolute top-1/2 -translate-y-1/2 left-4 text-gray-400 hover:text-gray-600"
                 aria-label="مسح البحث"
               >
@@ -332,14 +395,14 @@ export default function Products() {
               label="درجات الحرارة" 
               options={materialsList} 
               active={activeMaterial} 
-              onChange={setActiveMaterial}
+              onChange={handleMaterialChange}
               displayMapper={getMaterialLabel}
             />
             <FilterRow 
               label="النوع" 
               options={typesList} 
               active={activeType} 
-              onChange={setActiveType} 
+              onChange={handleTypeChange} 
             />
             
             {/* عرض عدد النتائج */}
@@ -362,17 +425,17 @@ export default function Products() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.3 }}
                   whileHover={{ y: -5, boxShadow: "0 16px 40px rgba(0,0,0,0.10)" }}
-                  className="card overflow-hidden flex flex-col bg-white"
+                  className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden flex flex-col h-full group"
                 >
-                  <Link to={`/products/${p.id}`} className="flex flex-col flex-1">
-                    {/* تحسين عرض الصورة - جعلها أكبر وأوضح */}
-                    <div className="h-64 sm:h-72 md:h-80 overflow-hidden bg-gray-100 relative group">
+                  <Link to={`/products/${p.id}`} className="flex flex-col flex-1 h-full">
+                    {/* صندوق الصورة بنسبة ثابتة 4:3 ومقاس متطابق لجميع المنتجات */}
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50 group">
                       {p.images && p.images.length > 0 ? (
                         <>
                           <img
                             src={p.images[0].url || p.images[0]}
                             alt={p.name}
-                            className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105 bg-white"
+                            className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                             loading="lazy"
                             onError={(e) => {
                               e.target.onerror = null;
@@ -380,14 +443,14 @@ export default function Products() {
                             }}
                           />
                           {/* أيقونة التكبير */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-300 flex items-center justify-center pointer-events-none">
                             <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
                               <ZoomIn size={24} className="text-brand-blue" />
                             </div>
                           </div>
                         </>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-50">
                           <span className="text-gray-400 text-sm">لا توجد صورة</span>
                         </div>
                       )}
@@ -451,10 +514,12 @@ export default function Products() {
               </p>
               <button 
                 onClick={() => {
-                  handleCategoryChange("الكل");
+                  setActiveCategory("الكل");
                   setActiveMaterial("الكل");
                   setActiveType("الكل");
                   setSearchTerm("");
+                  setCurrentPage(1);
+                  syncStateToUrl("الكل", "الكل", "الكل", "", 1);
                 }}
                 className="mt-4 text-brand-blue text-sm font-bold hover:underline"
               >

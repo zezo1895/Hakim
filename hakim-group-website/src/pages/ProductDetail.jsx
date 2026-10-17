@@ -1,6 +1,6 @@
 // src/pages/ProductDetail.jsx
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, lazy, Suspense } from "react";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Flame,
@@ -14,11 +14,18 @@ import {
   X,
   ChevronRight,
   ChevronLeft as ChevronLeftIcon,
-  ShoppingCart
+  ShoppingCart,
+  Box,
+  Sparkles,
 } from "lucide-react";
 import Loader from "../components/Loader";
 import { Helmet } from "react-helmet-async";
 import { useQuote } from "../context/QuoteContext";
+import { getCachedProductDetail } from "../services/productCache";
+import { isAluminiumProduct, getStoredAluminiumProducts, DEFAULT_ALUMINIUM_PROFILES } from "../data/aluminiumProfiles";
+
+// تحميل عارض الـ 3D بشكل كسول (Code-Splitting) لتقليل حجم الحزمة الرئيسية
+const ProductViewer3D = lazy(() => import("../components/ProductViewer3D"));
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -100,7 +107,10 @@ export default function ProductDetail({ popupId, isPopup = false }) {
   const [error, setError] = useState(null);
   const [activeImg, setActiveImg] = useState(0);
   const [zoomed, setZoomed] = useState(false);
+  const [autoDimensions, setAutoDimensions] = useState(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlFinish = searchParams.get("finish");
   const { addToCart } = useQuote();
 
   // إعادة تعيين مؤشر الصورة النشطة عند تغيير المنتج
@@ -115,14 +125,52 @@ export default function ProductDetail({ popupId, isPopup = false }) {
         setError(null);
         setActiveImg(0);
         
-        const productResponse = await fetch(`${API}/products/${id}`);
-        if (!productResponse.ok) {
-          if (!isPopup) {
-            navigate("/", { replace: true });
-          }
-          throw new Error(`Failed to fetch product: ${productResponse.status}`);
+        const lookup = decodeURIComponent(id || "").trim();
+        const lookupSpaces = lookup.replace(/-/g, " ");
+        const lookupHyphens = lookup.replace(/\s+/g, "-");
+        const cleanLookup = lookup.replace(/^(al-)/i, "");
+        const cleanLookupHyphens = cleanLookup.replace(/\s+/g, "-");
+        const cleanLookupSpaces = cleanLookup.replace(/-/g, " ");
+
+        const findFallback = () => {
+          const list = getStoredAluminiumProducts();
+          return list.find((p) => {
+            const pid = String(p.id || "").toLowerCase();
+            const pcode = String(p.code || "").toLowerCase();
+            const pname = String(p.name || "").toLowerCase();
+            const lk = lookup.toLowerCase();
+            const clk = cleanLookup.toLowerCase();
+            const clkHyphens = cleanLookupHyphens.toLowerCase();
+            const clkSpaces = cleanLookupSpaces.toLowerCase();
+
+            return (
+              pid === lk ||
+              pid === clk ||
+              pid === clkHyphens ||
+              pcode === lk ||
+              pcode === clk ||
+              pcode === clkHyphens ||
+              pcode === clkSpaces ||
+              pname === lk ||
+              pname === clk ||
+              pname.includes(clk) ||
+              pname.includes(clkHyphens) ||
+              pname.includes(clkSpaces)
+            );
+          });
+        };
+
+        let productData = null;
+        try {
+          productData = await getCachedProductDetail(API, id);
+        } catch (fetchErr) {
+          productData = findFallback();
         }
-        const productData = await productResponse.json();
+
+        if (!productData || !productData.id) {
+          productData = findFallback();
+        }
+
         if (!productData) {
           if (!isPopup) {
             navigate("/", { replace: true });
@@ -130,8 +178,13 @@ export default function ProductDetail({ popupId, isPopup = false }) {
           throw new Error("Product not found");
         }
         setProduct(productData);
+
+        // إذا تم استدعاء المنتج باسمه أو كوده القديم بدلاً من الـ UUID في الـ URL، نحدث الرابط فوراً إلى الـ UUID الحقيقي
+        if (!isPopup && productData.id && String(id).toLowerCase() !== String(productData.id).toLowerCase()) {
+          navigate(`/products/${productData.id}`, { replace: true });
+        }
         
-        if (!isPopup) {
+        if (!isPopup && !String(id).startsWith("al-if-")) {
           fetch(`${API}/products/${id}/view`, { method: "POST" }).catch(console.error);
         }
 
@@ -182,13 +235,20 @@ export default function ProductDetail({ popupId, isPopup = false }) {
         <div className="max-w-md mx-auto">
           <div className="text-6xl mb-4">😅</div>
           <p className="text-gray-500 mb-4">{error || "المنتج غير موجود."}</p>
-          <Link 
-            to="/products" 
-            className="inline-flex items-center gap-2 text-brand-blue font-semibold hover:underline"
+          <button 
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/products");
+              }
+            }}
+            className="inline-flex items-center gap-2 text-brand-blue font-semibold hover:underline cursor-pointer"
           >
             <ChevronLeft size={16} />
             العودة للكتالوج
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -199,6 +259,12 @@ export default function ProductDetail({ popupId, isPopup = false }) {
   const hasNotes = Boolean(product.notes);
   const tone = materialTone[product.material_name] || materialTone["بلاستيك"];
   
+  const isAluminium = isAluminiumProduct(product);
+
+  const displayAluminiumRelated = (relatedProducts.length > 0 ? relatedProducts : sameGroupProducts).length > 0
+    ? (relatedProducts.length > 0 ? relatedProducts : sameGroupProducts)
+    : getStoredAluminiumProducts().filter((p) => String(p.id) !== String(product.id) && String(p.code) !== String(product.code));
+
   // الحصول على صور المنتج
   const productImages = product.images && product.images.length > 0 
     ? product.images.map(img => img.url || img) 
@@ -213,8 +279,8 @@ export default function ProductDetail({ popupId, isPopup = false }) {
     <div dir="rtl" className={isPopup ? "bg-[#fafafa]" : "pt-20 min-h-screen bg-[#fafafa]"}>
       {!isPopup && (
         <Helmet>
-          <title>{product.name} | مصنع حكيم</title>
-          <meta name="description" content={`اشتري ${product.name} بجودة عالية من مصنع حكيم للعبوات. الخامة: ${product.material_name}. ${product.notes || ""}`} />
+          <title>{product.name} | مجموعة حكيم الصناعية</title>
+          <meta name="description" content={`مواصفات وتفاصيل ${product.name} من مجموعة حكيم الصناعية منذ 1975. الخامة: ${product.material_name || "منتج صناعي"}. ${product.notes || ""}`} />
           {productImages[0] && <meta property="og:image" content={productImages[0]} />}
         </Helmet>
       )}
@@ -222,11 +288,30 @@ export default function ProductDetail({ popupId, isPopup = false }) {
       {!isPopup && (
         <div className="border-b border-gray-100 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-xs text-gray-400">
-            <Link to="/products" className="hover:text-brand-blue transition-colors font-semibold">
-              الكتالوج
-            </Link>
+            {isAluminium ? (
+              <Link
+                to="/aluminium"
+                className="hover:text-brand-blue transition-colors font-semibold cursor-pointer"
+              >
+                كتالوج الألومنيوم
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    navigate(-1);
+                  } else {
+                    navigate("/products");
+                  }
+                }}
+                className="hover:text-brand-blue transition-colors font-semibold cursor-pointer"
+              >
+                الكتالوج
+              </button>
+            )}
             <ChevronLeft size={13} />
-            <span className="text-gray-500">{product.material_name || 'منتج'}</span>
+            <span className="text-gray-500">{isAluminium ? "قطاعات ألومنيوم" : (product.material_name || 'منتج')}</span>
             <ChevronLeft size={13} />
             <span className="text-gray-700 font-semibold truncate">{product.name}</span>
           </div>
@@ -235,7 +320,255 @@ export default function ProductDetail({ popupId, isPopup = false }) {
 
       <section className={isPopup ? "py-4 px-2 sm:px-4" : "py-10 sm:py-14 px-4 sm:px-6 lg:px-8"}>
         <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-start">
+          {isAluminium ? (
+            /* ===== ALUMIMIUM 3D & 2D VIEW ===== */
+            <div>
+              {/* Top Section: 3D viewer and 2D image SIDE BY SIDE (equal height cards; stacked on mobile with 3D viewer first) */}
+              {product.model_url ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch mb-10">
+                  {/* 1. 3D Viewer Card */}
+                  <div className="h-[480px] sm:h-[540px] rounded-3xl overflow-hidden border border-slate-800/90 bg-[#0c121e] shadow-xl flex flex-col relative">
+                    <Suspense
+                      fallback={
+                        <div className="h-full flex items-center justify-center bg-[#0c121e] text-slate-400">
+                          <Loader label="جاري تشغيل العارض ثلاثي الأبعاد..." />
+                        </div>
+                      }
+                    >
+                      <ProductViewer3D
+                        modelUrl={product.model_url}
+                        productName={product.name || product.code}
+                        profileDimensions={{
+                          widthMm: product.width_mm,
+                          heightMm: product.height_mm,
+                          lengthMm: product.length_mm,
+                        }}
+                        initialFinishId={urlFinish || product.finish_id || product.finish}
+                        onDimensionsCalculated={setAutoDimensions}
+                      />
+                    </Suspense>
+                  </div>
+
+                  {/* 2. 2D Image Card (Equal height) */}
+                  <div className="h-[480px] sm:h-[540px] rounded-3xl overflow-hidden border border-slate-200/90 bg-white shadow-sm relative group flex flex-col">
+                    <div className="relative flex-1 w-full bg-slate-50 overflow-hidden">
+                      <button
+                        onClick={() => setZoomed(true)}
+                        className="w-full h-full block relative cursor-zoom-in"
+                        title="انقر لتكبير الصورة الرسمية"
+                      >
+                        <img
+                          src={productImages[activeImg]}
+                          alt={product.name}
+                          className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "/placeholder-image.jpg";
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all duration-300 flex items-center justify-center">
+                          <div className="bg-white/95 backdrop-blur-sm rounded-full p-3 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110">
+                            <ZoomIn size={24} className="text-brand-blue" />
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Badges */}
+                      <div className="absolute top-4 right-4 flex items-center gap-2">
+                        <span className="px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-sm text-xs font-bold text-slate-700 shadow-sm border border-slate-100 flex items-center gap-1.5">
+                          <Sparkles size={13} className="text-brand-blue" />
+                          صورة هندسية ثنائية الأبعاد (2D)
+                        </span>
+                      </div>
+                      {product.code && (
+                        <span className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-sm text-white text-xs font-mono tracking-wider shadow">
+                          {product.code}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Thumbnails if multiple images */}
+                    {productImages.length > 1 && (
+                      <div className="flex gap-2.5 p-3.5 bg-white border-t border-slate-100 overflow-x-auto">
+                        {productImages.map((img, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setActiveImg(i)}
+                            className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${
+                              activeImg === i ? "border-brand-blue ring-2 ring-brand-blue/30 scale-105" : "border-slate-200 opacity-60 hover:opacity-100"
+                            }`}
+                          >
+                            <img src={img} alt={`صورة ${i + 1}`} className="w-full h-full object-cover" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* If a product has no GLB, show the 2D image full width */
+                <div className="max-w-4xl mx-auto mb-10">
+                  <div className="relative aspect-[16/10] sm:aspect-[16/9] max-h-[500px] rounded-3xl overflow-hidden border border-slate-200/90 bg-white shadow-sm group">
+                    <button
+                      onClick={() => setZoomed(true)}
+                      className="w-full h-full block relative cursor-zoom-in"
+                    >
+                      <img
+                        src={productImages[activeImg]}
+                        alt={product.name}
+                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/placeholder-image.jpg";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-all duration-300 flex items-center justify-center">
+                        <div className="bg-white/95 backdrop-blur-sm rounded-full p-3 shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-110">
+                          <ZoomIn size={26} className="text-brand-blue" />
+                        </div>
+                      </div>
+                    </button>
+                    {product.code && (
+                      <span className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-black/75 backdrop-blur-sm text-white text-xs font-mono tracking-wider shadow">
+                        {product.code}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Product Details & Actions Card below */}
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-10 shadow-sm mb-12">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 pb-6 border-b border-slate-100">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                        <Layers size={13} className="text-brand-blue" />
+                        قطاع ألومنيوم هندسي
+                      </span>
+                      {product.model_url && (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-brand-blue border border-blue-200/60">
+                          <Box size={13} />
+                          يدعم العرض التفاعلي 3D
+                        </span>
+                      )}
+                    </div>
+                    <h1 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight">
+                      {product.name}
+                    </h1>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {product.code && (
+                      <div className="shrink-0 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-center sm:text-right">
+                        <span className="text-[11px] font-bold text-slate-400 block mb-0.5">كود البروفيل الهندسي</span>
+                        <span className="font-mono font-black text-xl text-brand-blue tracking-wide">{product.code}</span>
+                      </div>
+                    )}
+                    {autoDimensions && (
+                      <div className="shrink-0 bg-blue-50/70 border border-blue-200/80 rounded-2xl px-5 py-3.5 text-center sm:text-right">
+                        <span className="text-[11px] font-bold text-blue-600 block mb-0.5">📐 المقاس التلقائي من الـ 3D</span>
+                        <span className="font-mono font-bold text-base text-brand-blue tracking-wide">
+                          {autoDimensions.widthMm} × {autoDimensions.heightMm} mm
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes / Description */}
+                {product.notes && (
+                  <div className="py-6 border-b border-slate-100">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">الوصف الهندسي والملاحظات</h3>
+                    <p className="text-slate-700 leading-relaxed text-sm sm:text-base whitespace-pre-line">
+                      {product.notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Actions (Quote Cart & WhatsApp CTA) */}
+                <div className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {!isPopup && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => addToCart(product)}
+                      className="relative overflow-hidden flex items-center justify-center gap-3 w-full py-4 bg-gray-900 text-white font-black text-base sm:text-lg rounded-2xl shadow-xl shadow-gray-900/20 transition-all group cursor-pointer"
+                    >
+                      <span className="absolute inset-0 w-full h-full -ml-[100%] group-hover:ml-[100%] bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 transition-all duration-700 ease-in-out"></span>
+                      <ShoppingCart size={22} className="group-hover:animate-bounce" />
+                      إضافة لسلة التسعير المجمع
+                    </motion.button>
+                  )}
+
+                  <motion.a
+                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${buildWhatsappMessage(product, productImages[0])}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center justify-center gap-2.5 w-full py-4 bg-brand-green/10 text-brand-green font-bold text-base sm:text-lg rounded-2xl border-2 border-brand-green hover:bg-brand-green hover:text-white transition-colors cursor-pointer"
+                  >
+                    <MessageCircle size={20} />
+                    طلب تسعير فوري عبر الواتساب
+                  </motion.a>
+                </div>
+              </div>
+
+              {/* Related Profiles if any */}
+              {displayAluminiumRelated.length > 0 && (
+                <div className="mt-12 pt-8 border-t border-slate-200">
+                  <div className="flex items-center gap-2 mb-6">
+                    <Layers size={18} className="text-brand-blue" />
+                    <h3 className="text-lg font-extrabold text-slate-800">قطاعات ألومنيوم أخرى</h3>
+                    <span className="text-sm text-slate-400 mr-2">({displayAluminiumRelated.length})</span>
+                  </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayAluminiumRelated.map((p) => (
+                      <Link
+                        key={p.id}
+                        to={`/products/${p.id}`}
+                        className="group rounded-2xl overflow-hidden border border-slate-200/80 bg-white hover:shadow-lg hover:border-brand-blue/40 transition-all flex flex-col h-full"
+                      >
+                        <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-50">
+                          {p.images && p.images.length > 0 ? (
+                            <img
+                              src={p.images[0].url || p.images[0]}
+                              alt={p.name}
+                              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "/placeholder-image.jpg";
+                              }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-slate-50">
+                              <span className="text-slate-400 text-sm">لا توجد صورة</span>
+                            </div>
+                          )}
+                          {p.model_url && (
+                            <span className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-brand-blue/90 backdrop-blur-sm text-white text-[11px] font-bold shadow-md flex items-center gap-1">
+                              <Box size={12} />
+                              3D
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-4 flex flex-col flex-1">
+                          <p className="text-sm font-bold text-slate-800 mb-1 line-clamp-1">{p.name}</p>
+                          {p.code && (
+                            <span className="font-mono text-xs font-semibold text-brand-blue mt-auto">{p.code}</span>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ===== EXISTING PLASTIC / PIPES VIEW ===== */
+            <>
+              <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-10 lg:gap-14 items-start">
             {/* ===== Gallery ===== */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -243,8 +576,8 @@ export default function ProductDetail({ popupId, isPopup = false }) {
               transition={{ duration: 0.5 }}
               className="lg:sticky lg:top-28"
             >
-              {/* الصورة الرئيسية - محسنة للعرض الكامل */}
-              <div className="relative w-full rounded-3xl overflow-hidden bg-white border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.05)] h-96 sm:h-[30rem] lg:h-[32rem]">
+              {/* الصورة الرئيسية - بنسبة ثابتة 4:3 ومقاس متناسق */}
+              <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden bg-gray-50 border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.05)]">
                 <button
                   onClick={() => setZoomed(true)}
                   className="w-full h-full block relative group"
@@ -258,7 +591,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                       transition={{ duration: 0.3 }}
                       src={productImages[activeImg]}
                       alt={product.name}
-                      className="w-full h-full object-contain bg-white p-2"
+                      className="absolute inset-0 w-full h-full object-cover object-center"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src = '/placeholder-image.jpg';
@@ -317,7 +650,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                     <button
                       key={i}
                       onClick={() => setActiveImg(i)}
-                      className={`relative w-[calc(25%-0.5625rem)] sm:w-24 aspect-square shrink-0 rounded-2xl overflow-hidden border-2 transition-all duration-200 ${
+                      className={`relative w-[calc(25%-0.5625rem)] sm:w-24 aspect-square shrink-0 rounded-2xl overflow-hidden border-2 transition-all duration-200 bg-gray-50 ${
                         activeImg === i
                           ? "border-brand-blue shadow-lg scale-105"
                           : "border-transparent opacity-60 hover:opacity-100 hover:scale-105"
@@ -326,7 +659,7 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                       <img 
                         src={img} 
                         alt={`صورة ${i + 1}`}
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover object-center"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = '/placeholder-image.jpg';
@@ -428,11 +761,11 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                       const innerContent = (
                         <>
                           {lidImage ? (
-                            <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden p-2 flex items-center justify-center group-hover:bg-white transition-colors">
+                            <div className="relative w-20 sm:w-24 aspect-square shrink-0 rounded-lg bg-gray-50 border border-gray-100 overflow-hidden">
                               <img 
                                 src={lidImage} 
                                 alt={lidName} 
-                                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                                className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                 }}
@@ -518,21 +851,21 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                   <Link
                     key={p.id}
                     to={`/products/${p.id}`}
-                    className="group rounded-2xl overflow-hidden border border-gray-100 bg-white hover:shadow-lg hover:border-brand-blue/30 transition-all"
+                    className="group rounded-2xl overflow-hidden border border-gray-100 bg-white hover:shadow-lg hover:border-brand-blue/30 transition-all flex flex-col h-full"
                   >
-                    <div className="h-48 overflow-hidden bg-gray-100 relative">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50">
                       {p.images && p.images.length > 0 ? (
                         <img
                           src={p.images[0].url || p.images[0]}
                           alt={p.name}
-                          className="w-full h-full object-contain bg-white p-2 group-hover:scale-105 transition-transform duration-300"
+                          className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = '/placeholder-image.jpg';
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-50">
                           <span className="text-gray-400 text-sm">لا توجد صورة</span>
                         </div>
                       )}
@@ -542,11 +875,11 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                         </span>
                       )}
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 flex flex-col flex-1">
                       {/* عرض اسم المنتج بدلاً من المقاس */}
                       <p className="text-sm font-bold text-gray-800 mb-1 line-clamp-1">{p.name}</p>
                       {p.code && (
-                        <span className="font-mono text-[10px] text-gray-400">{p.code}</span>
+                        <span className="font-mono text-[10px] text-gray-400 mt-auto">{p.code}</span>
                       )}
                     </div>
                   </Link>
@@ -566,28 +899,28 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                   <Link
                     key={p.id}
                     to={`/products/${p.id}`}
-                    className="group rounded-2xl overflow-hidden border border-gray-100 bg-white hover:shadow-lg transition-shadow"
+                    className="group rounded-2xl overflow-hidden border border-gray-100 bg-white hover:shadow-lg transition-shadow flex flex-col h-full"
                   >
-                    <div className="h-48 overflow-hidden bg-gray-100">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50">
                       {p.images && p.images.length > 0 ? (
                         <img
                           src={p.images[0].url || p.images[0]}
                           alt={p.name}
-                          className="w-full h-full object-contain bg-white p-2 group-hover:scale-105 transition-transform duration-300"
+                          className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = '/placeholder-image.jpg';
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-gray-50">
                           <span className="text-gray-400 text-sm">لا توجد صورة</span>
                         </div>
                       )}
                     </div>
-                    <div className="p-4">
-                      <p className="text-sm font-bold text-gray-800">{p.name}</p>
-                      <span className={`inline-flex items-center gap-1 mt-1 text-[11px] font-bold ${tempInfo(p.temp || 'both').color}`}>
+                    <div className="p-4 flex flex-col flex-1">
+                      <p className="text-sm font-bold text-gray-800 line-clamp-1">{p.name}</p>
+                      <span className={`inline-flex items-center gap-1 mt-auto pt-1 text-[11px] font-bold ${tempInfo(p.temp || 'both').color}`}>
                         {p.temp === "both" ? (
                           <span className="flex items-center -space-x-0.5 -space-x-reverse">
                             <Flame size={11} className="text-orange-500" />
@@ -605,6 +938,8 @@ export default function ProductDetail({ popupId, isPopup = false }) {
                 ))}
               </div>
             </div>
+          )}
+            </>
           )}
         </div>
       </section>

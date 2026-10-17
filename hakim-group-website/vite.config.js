@@ -1,13 +1,45 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Automatic copy to guarantee clean, URL-safe asset names for hero images and branded favicon
+try {
+  const publicDir = path.resolve(__dirname, "public");
+  const copies = [
+    ["Generated Image October 13, 2026 - 3_49PM.jpg", "hero-plastic-rv.jpg"],
+    ["Generated Image October 13, 2026 - 3_47PM.jpg", "hero-pipes-line.jpg"],
+    ["Generated Image October 13, 2026 - 3_42PM.jpg", "hero-aluminium-press.jpg"],
+  ];
+  for (const [src, dest] of copies) {
+    const srcPath = path.join(publicDir, src);
+    const destPath = path.join(publicDir, dest);
+    if (fs.existsSync(srcPath) && !fs.existsSync(destPath)) {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+
+  // Copy branded logo as favicon.png and apple-touch-icon.png
+  const logoSrc = path.resolve(__dirname, "src/assets/product_1079686086__employee.png");
+  if (fs.existsSync(logoSrc)) {
+    fs.copyFileSync(logoSrc, path.join(publicDir, "favicon.png"));
+    fs.copyFileSync(logoSrc, path.join(publicDir, "logo.png"));
+    fs.copyFileSync(logoSrc, path.join(publicDir, "apple-touch-icon.png"));
+  }
+} catch (e) {
+  console.warn("[Vite] Asset copy error:", e);
+}
 
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg', 'favicon.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Hakim Group',
         short_name: 'Hakim',
@@ -18,17 +50,12 @@ export default defineConfig({
         start_url: '/products',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'favicon.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
+            src: 'favicon.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'
@@ -53,7 +80,7 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/hakim-production-5171\.up\.railway\.app\/api\/.*/i,
+            urlPattern: /^https:\/\/hakim-production-[a-z0-9]+\.up\.railway\.app\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -69,7 +96,40 @@ export default defineConfig({
           }
         ]
       }
-    })
+    }),
+    {
+      name: 'wood-texture-saver',
+      configureServer(server) {
+        server.middlewares.use('/api/save-wood-texture', (req, res) => {
+          if (req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => { body += chunk; });
+            req.on('end', () => {
+              try {
+                const { filename, dataUrl } = JSON.parse(body);
+                if (filename && dataUrl) {
+                  const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+                  const buffer = Buffer.from(base64Data, 'base64');
+                  const outDir = path.resolve(__dirname, 'public/textures/wood');
+                  if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+                  fs.writeFileSync(path.join(outDir, filename), buffer);
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ success: true, path: `/textures/wood/${filename}` }));
+                  return;
+                }
+              } catch (e) {
+                console.error('Error saving wood texture:', e);
+              }
+              res.statusCode = 500;
+              res.end(JSON.stringify({ error: 'Failed' }));
+            });
+          } else {
+            res.statusCode = 405;
+            res.end();
+          }
+        });
+      }
+    }
   ],
   server: {
     host: true,

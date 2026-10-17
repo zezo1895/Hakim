@@ -69,12 +69,12 @@ export default function About() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               onClick={() => setSelectedImg(chairmanWithMinister)} // فتح الصورة عند الضغط
-              className="relative rounded-3xl overflow-hidden shadow-2xl cursor-pointer group"
+              className="relative aspect-[4/3] w-full rounded-3xl overflow-hidden shadow-2xl cursor-pointer group bg-gray-50"
             >
               <img 
                 src={chairmanWithMinister} 
                 alt="المهندس أحمد عبد الحكيم هاشم مع وزير العمل" 
-                className="w-full h-auto object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-500"
               />
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 via-black/60 to-transparent p-8 sm:p-10">
                 <h3 className="text-white text-3xl font-bold mb-1">المهندس أحمد عبد الحكيم هاشم</h3>
@@ -113,13 +113,13 @@ export default function About() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 onClick={() => setSelectedImg(meeting1)} // فتح الصورة عند الضغط
-                className="group cursor-pointer"
+                className="group cursor-pointer flex flex-col h-full"
               >
-                <div className="rounded-3xl overflow-hidden shadow-lg mb-4">
+                <div className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-lg mb-4 bg-gray-50">
                   <img 
                     src={meeting1} 
                     alt="اجتماع عمل رسمي" 
-                    className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   />
                 </div>
                 <h4 className="font-semibold text-lg">اجتماع عمل رسمي</h4>
@@ -131,13 +131,13 @@ export default function About() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 onClick={() => setSelectedImg(meeting2)} // فتح الصورة عند الضغط
-                className="group cursor-pointer"
+                className="group cursor-pointer flex flex-col h-full"
               >
-                <div className="rounded-3xl overflow-hidden shadow-lg mb-4">
+                <div className="relative aspect-video w-full rounded-3xl overflow-hidden shadow-lg mb-4 bg-gray-50">
                   <img 
                     src={meeting2} 
                     alt="لقاء استراتيجي" 
-                    className="w-full aspect-video object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                   />
                 </div>
                 <h4 className="font-semibold text-lg">لقاء استراتيجي</h4>

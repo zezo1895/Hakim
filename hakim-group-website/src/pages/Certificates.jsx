@@ -84,22 +84,22 @@ function CertCard({ c, onOpen, index }) {
       exit={{ opacity: 0, y: 24 }}
       transition={{ duration: 0.35, delay: index * 0.04 }}
       whileHover={{ y: -5, boxShadow: "0 16px 40px rgba(0,0,0,0.10)" }}
-      className="card overflow-hidden flex flex-col group"
+      className="card overflow-hidden flex flex-col h-full group"
     >
       <button
         onClick={() => onOpen(c)}
-        className="relative h-48 w-full overflow-hidden bg-gray-100"
+        className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50 p-4 flex items-center justify-center"
       >
         <img
           src={c.img}
           alt={c.title}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
         />
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/35 transition-colors flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center pointer-events-none">
           <ZoomIn
             size={26}
-            className="text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
           />
         </div>
       </button>
@@ -112,7 +112,7 @@ function CertCard({ c, onOpen, index }) {
         <h3 className="text-gray-800 font-bold text-base mb-0.5">{c.title}</h3>
         <p className="text-brand-green text-xs font-semibold mb-2">{c.subtitle}</p>
         <p className="text-gray-400 text-xs leading-relaxed mb-3 flex-1">{c.description}</p>
-        <div className="flex items-center justify-between text-[11px] text-gray-400 border-t border-gray-100 pt-2.5">
+        <div className="flex items-center justify-between text-[11px] text-gray-400 border-t border-gray-100 pt-2.5 mt-auto">
           <span>{c.issuer}</span>
           <span className="font-mono">{c.year}</span>
         </div>

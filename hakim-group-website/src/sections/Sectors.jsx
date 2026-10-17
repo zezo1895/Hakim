@@ -1,109 +1,109 @@
 // src/sections/Sectors.jsx
 import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import pipe from "../assets/pipes2.jpg"
-import al from "../assets/al2.jpg"
-import plast from "../assets/plast2.jpg"
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import pipe from "../assets/pipes2.jpg";
+import al from "../assets/al2.jpg";
+import plast from "../assets/plast2.jpg";
 
-// ⚠️ قيمة "category" هنا لازم تطابق بالحرف اسم الفئة (material_categories.name)
-// المُسجَّل فعليًا في قاعدة البيانات / لوحة التحكم. لو الاسم مختلف عندك،
-// عدّل القيمة هنا فقط وكل حاجة هتشتغل صح تلقائيًا.
 const sectors = [
   {
-    id: "food",
-    title: "قطاع البلاستيك",
-    category: "بلاستيك",
-    code: "10.8040",
-    label: "علبة",
-    ctaLabel: "تصفح كتالوج التغليف",
-    images: [
-      plast,
-    ],
-    alt: "علب ومنتجات التغليف الغذائي",
+    id: "plastic",
+    title: "قطاع العبوات ومواد التعبئة والتغليف",
+    category: "عبوات وتغليف",
+    tag: "بلاستيك وكرتون غذائي وصناعي",
+    desc: "حلول إنتاجية متكاملة للعبوات البلاستيكية، العلب، حاويات الأغذية، وحلول الكرتون ومواد التعبئة المصنعة وفق أعلى المعايير الصحية لخدمة كبرى المصانع والمطاعم والشركات.",
+    ctaLabel: "استكشف كتالوج مواد التعبئة والعبوات",
+    image: plast,
+    alt: "حلول العبوات البلاستيكية ومواد التعبئة والتغليف من مجموعة حكيم",
   },
   {
     id: "pipes",
-    title: "قطاع المواسير",
+    title: "قطاع المواسير وشبكات البنية",
     category: "مواسير",
-    code: "10.531",
-    label: "غطاء",
-    ctaLabel: "تصفح كتالوج المواسير",
-    images: [
-      pipe,
-    ],
-    alt: "مواسير بلاستيكية صناعية",
+    tag: "مشاريع وبنية تحتية",
+    desc: "مواسير وقطع شبكات الري والتغذية والصرف عالية التحمل (PVC, HDPE) المعتمدة للمشروعات القومية والإنشائية الكبرى في مصر والشرق الأوسط.",
+    ctaLabel: "استكشف كتالوج المواسير",
+    image: pipe,
+    alt: "مواسير وشبكات البنية التحتية من مجموعة حكيم",
   },
   {
     id: "aluminium",
-    title: "قطاع الألومنيوم",
+    title: "قطاع الألومنيوم والقطاعات الهندسية",
     category: "ألومنيوم",
-    code: "AL.101",
-    label: "بروفيل",
+    tag: "إنشاءات وهندسة معمارية",
+    desc: "بروفيلات وقطاعات ألومنيوم معمارية وصناعية دقيقة تلبي متطلبات الواجهات الحديثة والمنشآت الهندسية بأعلى كفاءة ميكانيكية ومقاومة للعوامل الجوية.",
     ctaLabel: "تصفح كتالوج الألومنيوم",
-    images: [
-    al
-    ],
-    alt: "بروفيلات ألومنيوم",
+    image: al,
+    alt: "بروفيلات وقطاعات ألومنيوم مجموعة حكيم",
   },
 ];
 
-const container = {
+const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.14 } },
-};
-const card = {
-  hidden:  { opacity: 0, y: 50 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] } },
+  visible: {
+    transition: { staggerChildren: 0.15 },
+  },
 };
 
-function SectorCard({ s }) {
+const cardVariants = {
+  hidden: { opacity: 0, y: 32 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.65, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+function SectorCard({ sector }) {
   return (
     <motion.div
-      variants={card}
-      whileHover={{ y: -8, boxShadow: "0 24px 56px rgba(0,0,0,0.13)" }}
-      transition={{ type: "spring", stiffness: 280, damping: 22 }}
-      dir="rtl"
-      className="bg-white rounded-2xl overflow-hidden border border-gray-100 flex flex-col"
+      variants={cardVariants}
+      className="group bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col h-full overflow-hidden relative"
     >
-      {/* Header bar */}
-      <div className="py-4 px-5 text-center">
-        <h3 className="text-base sm:text-lg font-extrabold text-gray-800">{s.title}</h3>
-      </div>
+      {/* Sector Image with Smooth Zoom */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-50">
+        <img
+          src={sector.image}
+          alt={sector.alt}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
+        />
+        {/* Soft gradient bottom fade on image */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
 
-      {/* Image(s) */}
-      <div className="px-5">
-        <div className={`grid gap-2 ${s.images.length > 1 ? "grid-cols-2" : "grid-cols-1"} h-44 sm:h-48 rounded-xl overflow-hidden bg-gray-100`}>
-          {s.images.map((img, i) => (
-            <motion.img
-              key={i}
-              whileHover={{ scale: 1.06 }}
-              transition={{ duration: 0.45 }}
-              src={img}
-              alt={s.alt}
-              className="w-full h-full object-cover"
-              loading="lazy"
-            />
-          ))}
+        {/* Sector Tag Badge */}
+        <div className="absolute top-4 right-4">
+          <span className="inline-block px-3 py-1 rounded-lg text-xs font-bold bg-white/95 text-slate-800 shadow-sm backdrop-blur-sm border border-slate-100">
+            {sector.tag}
+          </span>
         </div>
       </div>
 
-      {/* Code label */}
-      <div className="px-5 pt-3 pb-1 flex items-center justify-start gap-2">
-        <span className="font-mono font-bold text-gray-700 text-sm">{s.code}</span>
-        <span className="text-gray-400 text-sm">{s.label}</span>
-      </div>
+      {/* Content Body */}
+      <div className="p-6 sm:p-7 flex-1 flex flex-col">
+        <h3 className="text-xl sm:text-2xl font-black text-slate-900 group-hover:text-brand-blue transition-colors mb-3">
+          {sector.title}
+        </h3>
 
-      {/* CTA */}
-      <div className="px-5 pb-5 pt-3 mt-auto">
-        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
-          <Link
-            to={`/products?category=${encodeURIComponent(s.category)}`}
-            className="flex items-center justify-center w-full py-2.5 rounded-xl font-bold text-sm text-brand-blue bg-blue-50 hover:bg-blue-100 transition-colors"
-          >
-            {s.ctaLabel}
-          </Link>
-        </motion.div>
+        <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6 flex-1">
+          {sector.desc}
+        </p>
+
+        {/* Animated Accent Line */}
+        <div className="w-full h-[2px] bg-slate-100 mb-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 h-full w-0 group-hover:w-full bg-brand-blue transition-all duration-400 ease-out" />
+        </div>
+
+        {/* Action Button */}
+        <Link
+          to={sector.id === "aluminium" ? "/aluminium" : `/products?category=${encodeURIComponent(sector.category)}`}
+          className="inline-flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-bold text-brand-blue bg-slate-50 border border-slate-200/80 group-hover:bg-brand-blue group-hover:text-white group-hover:border-brand-blue transition-all duration-200"
+        >
+          <span>{sector.ctaLabel}</span>
+          <ArrowLeft size={16} className="transition-transform group-hover:-translate-x-1" />
+        </Link>
       </div>
     </motion.div>
   );
@@ -111,20 +111,48 @@ function SectorCard({ s }) {
 
 export default function Sectors() {
   const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-80px" });
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section id="sectors" dir="rtl" className="pt-10 pb-16 sm:pb-20 lg:pb-24 bg-gray-50">
+    <section id="sectors" dir="rtl" className="py-20 sm:py-28 bg-[#f8fafc]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Section Heading */}
+        <div className="text-center max-w-3xl mx-auto mb-14 sm:mb-18">
+          <span className="section-badge">
+            ركائزنا الإنتاجية
+          </span>
+          <h2 className="section-title mb-4">
+            القطاعات الصناعية الرئيسية
+          </h2>
+
+          {/* Decorative accent line that draws in */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={inView ? { scaleX: 1 } : { scaleX: 0 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="w-16 h-1 bg-brand-blue mx-auto rounded-full mb-5 origin-center"
+          />
+
+          <p className="section-subtitle mx-auto">
+            منظومة تصنيع متكاملة تغطي احتياجات كبرى المؤسسات الصناعية وشركات المقاولات وتجارة الجملة عبر خطوط إنتاج حديثة ومواصفات عالمية.
+          </p>
+        </div>
+
+        {/* 3 Large Sector Cards */}
         <motion.div
           ref={ref}
-          variants={container}
+          variants={containerVariants}
           initial="hidden"
           animate={inView ? "visible" : "hidden"}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
         >
-          {sectors.map((s) => <SectorCard key={s.id} s={s} />)}
+          {sectors.map((sector) => (
+            <SectorCard key={sector.id} sector={sector} />
+          ))}
         </motion.div>
+
       </div>
     </section>
   );
