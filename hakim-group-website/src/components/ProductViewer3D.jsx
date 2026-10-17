@@ -272,7 +272,7 @@ export default function ProductViewer3D({
   // تطبيق المادة على جميع عناصر الموديل
   const applyFinishToModel = useCallback((finish) => {
     if (!modelGroupRef.current) return;
-    const newMaterial = createAluminiumMaterial(finish);
+    const newMaterial = createAluminiumMaterial(finish, sceneRef.current?.environment);
     modelGroupRef.current.traverse((child) => {
       if (child.isMesh) {
         child.material = newMaterial;
@@ -332,7 +332,8 @@ export default function ProductViewer3D({
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    // Neutral بدل ACES: ACES بيبهّت الألوان (الأسود بيطلع رمادي، الأصفر باهت). Neutral بيحافظ على لون الـ hex
+    renderer.toneMapping = THREE.NeutralToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     rendererRef.current = renderer;
@@ -344,6 +345,7 @@ export default function ProductViewer3D({
     pmremGenerator.compileEquirectangularShader();
     const envScene = new RoomEnvironment();
     scene.environment = pmremGenerator.fromScene(envScene).texture;
+    scene.environmentIntensity = 0.7; // للدهانات غير المعدنية؛ المعادن بتاخد envMap خاص في createAluminiumMaterial
 
     // Additional Balanced Key/Fill Directional Lights (خفيفة لضمان تطابق الألوان وعدم البهتان)
     const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.6);

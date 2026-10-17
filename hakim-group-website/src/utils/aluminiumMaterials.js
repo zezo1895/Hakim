@@ -265,7 +265,7 @@ function getSableBumpTexture() {
 
 /* ---------------------------- المصنع الرئيسي ---------------------------- */
 
-export function createAluminiumMaterial(finish) {
+function buildMaterial(finish) {
   if (!finish) {
     return new THREE.MeshPhysicalMaterial({ color: 0xa1a1a0, metalness: 0.9, roughness: 0.32 });
   }
@@ -334,4 +334,22 @@ export function createAluminiumMaterial(finish) {
     clearcoat: isMetallicRal ? 0.2 : 0.08,
     clearcoatRoughness: 0.35,
   });
+}
+
+/**
+ * الدالة المعتمدة. تمرّر لها scene.environment كـ envMap.
+ * القياس (رندر headless بنفس إعدادات المشغل) أثبت إن المعادن بتطلع أغمق من لونها الحقيقي
+ * مع Neutral tone mapping، فبنرفع انعكاس البيئة للمعادن فقط:
+ *   - أنودة / أنتيك (metalness >= 0.75): 1.8
+ *   - RAL معدني / لؤلؤي (metalness 0.5-0.75): 1.0
+ * ملحوظة: material.envMapIntensity مبيشتغلش مع scene.environment في three الحديثة،
+ * لازم envMap يتعيّن صراحةً على المادة.
+ */
+export function createAluminiumMaterial(finish, envMap) {
+  const mat = buildMaterial(finish);
+  if (envMap && mat.metalness >= 0.5) {
+    mat.envMap = envMap;
+    mat.envMapIntensity = mat.metalness >= 0.75 ? 1.8 : 1.0;
+  }
+  return mat;
 }
