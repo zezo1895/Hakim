@@ -153,7 +153,7 @@ export default function Products() {
     const urlQuery = searchParams.get("q");
 
     return {
-      category: urlCat !== null ? urlCat : (saved.category || "الكل"),
+      category: urlCat !== null ? urlCat : "الكل",
       page: urlPage && !isNaN(urlPage) && urlPage > 0 ? urlPage : (saved.page || 1),
       material: urlMat !== null ? urlMat : (saved.material || "الكل"),
       type: urlType !== null ? urlType : (saved.type || "الكل"),
@@ -241,10 +241,11 @@ export default function Products() {
   // لو الرابط اتغير من الخارج (مثلاً الضغط على رابط قطاع من الهيرو)
   const categoryFromUrl = searchParams.get("category");
   useEffect(() => {
-    if (categoryFromUrl && categoryFromUrl !== activeCategory) {
-      setActiveCategory(categoryFromUrl);
+    const targetCat = categoryFromUrl || "الكل";
+    if (targetCat !== activeCategory) {
+      setActiveCategory(targetCat);
       setCurrentPage(1);
-      syncStateToUrl(categoryFromUrl, activeMaterial, activeType, searchTerm, 1);
+      syncStateToUrl(targetCat, activeMaterial, activeType, searchTerm, 1);
     }
   }, [categoryFromUrl]);
 

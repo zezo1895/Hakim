@@ -18,8 +18,8 @@ export const productSectors = [
   {
     title: "قطاع العبوات ومواد التعبئة والتغليف",
     desc: "حلول البلاستيك والفوم والكرتون الغذائي والصناعي",
-    to: "/products?category=بلاستيك",
-    badge: "بلاستيك وفومو كرتون",
+    to: "/products",
+    badge: "بلاستيك وفوم وكرتون",
     icon: Package,
     color: "text-emerald-600 bg-emerald-50",
   },

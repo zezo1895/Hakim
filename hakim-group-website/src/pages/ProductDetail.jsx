@@ -22,10 +22,9 @@ import Loader from "../components/Loader";
 import { Helmet } from "react-helmet-async";
 import { useQuote } from "../context/QuoteContext";
 import { getCachedProductDetail } from "../services/productCache";
-import { isAluminiumProduct, getStoredAluminiumProducts, DEFAULT_ALUMINIUM_PROFILES } from "../data/aluminiumProfiles";
+import { isAluminiumProduct } from "../data/aluminiumProfiles";
 
-// تحميل عارض الـ 3D بشكل كسول (Code-Splitting) لتقليل حجم الحزمة الرئيسية
-const ProductViewer3D = lazy(() => import("../components/ProductViewer3D"));
+import ProductViewer3D from "../components/ProductViewer3D";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -132,59 +131,27 @@ export default function ProductDetail({ popupId, isPopup = false }) {
         const cleanLookupHyphens = cleanLookup.replace(/\s+/g, "-");
         const cleanLookupSpaces = cleanLookup.replace(/-/g, " ");
 
-        const findFallback = () => {
-          const list = getStoredAluminiumProducts();
-          return list.find((p) => {
-            const pid = String(p.id || "").toLowerCase();
-            const pcode = String(p.code || "").toLowerCase();
-            const pname = String(p.name || "").toLowerCase();
-            const lk = lookup.toLowerCase();
-            const clk = cleanLookup.toLowerCase();
-            const clkHyphens = cleanLookupHyphens.toLowerCase();
-            const clkSpaces = cleanLookupSpaces.toLowerCase();
-
-            return (
-              pid === lk ||
-              pid === clk ||
-              pid === clkHyphens ||
-              pcode === lk ||
-              pcode === clk ||
-              pcode === clkHyphens ||
-              pcode === clkSpaces ||
-              pname === lk ||
-              pname === clk ||
-              pname.includes(clk) ||
-              pname.includes(clkHyphens) ||
-              pname.includes(clkSpaces)
-            );
-          });
-        };
-
         let productData = null;
         try {
           productData = await getCachedProductDetail(API, id);
         } catch (fetchErr) {
-          productData = findFallback();
+          console.warn("Product fetch from DB failed:", fetchErr);
         }
 
         if (!productData || !productData.id) {
-          productData = findFallback();
-        }
-
-        if (!productData) {
           if (!isPopup) {
-            navigate("/", { replace: true });
+            navigate("/products", { replace: true });
           }
-          throw new Error("Product not found");
+          throw new Error("Product not found in database");
         }
         setProduct(productData);
 
-        // إذا تم استدعاء المنتج باسمه أو كوده القديم بدلاً من الـ UUID في الـ URL، نحدث الرابط فوراً إلى الـ UUID الحقيقي
+        // إذا تم استدعاء المنتج باسمه أو كوده بدلاً من الـ UUID في الـ URL، نحدث الرابط فوراً إلى الـ UUID الحقيقي
         if (!isPopup && productData.id && String(id).toLowerCase() !== String(productData.id).toLowerCase()) {
           navigate(`/products/${productData.id}`, { replace: true });
         }
         
-        if (!isPopup && !String(id).startsWith("al-if-")) {
+        if (!isPopup) {
           fetch(`${API}/products/${id}/view`, { method: "POST" }).catch(console.error);
         }
 
@@ -195,11 +162,29 @@ export default function ProductDetail({ popupId, isPopup = false }) {
         }));
         setSameGroupProducts(siblings);
 
-        // منتجات من نفس الخامة (مجلوبة مباشرة مع المنتج من الـ backend بدون تحميل الكتالوج كاملاً)
-        const related = (productData.related || []).map((r) => ({
+        // منتجات من نفس الخامة من قاعدة البيانات
+        let related = (productData.related || []).map((r) => ({
           ...r,
           images: r.images || (r.thumbnail ? [{ url: r.thumbnail }] : []),
         }));
+
+        // إذا كان قطاع ألومنيوم، نجلب فقط القطاعات الحقيقية الأخرى من قاعدة البيانات
+        if (isAluminiumProduct(productData) && related.length === 0 && siblings.length === 0) {
+          try {
+            const relRes = await fetch(`${API}/products?category=${encodeURIComponent("ألومنيوم")}`);
+            if (relRes.ok) {
+              const allAl = await relRes.json();
+              if (Array.isArray(allAl)) {
+                related = allAl.filter(
+                  (p) => isAluminiumProduct(p) && String(p.id) !== String(productData.id) && String(p.code || "") !== String(productData.code || "")
+                );
+              }
+            }
+          } catch (e) {
+            console.debug("Failed to fetch related aluminium from DB:", e);
+          }
+        }
+
         setRelatedProducts(related);
       } catch (err) {
         console.error("Error fetching product:", err);
@@ -261,9 +246,9 @@ export default function ProductDetail({ popupId, isPopup = false }) {
   
   const isAluminium = isAluminiumProduct(product);
 
-  const displayAluminiumRelated = (relatedProducts.length > 0 ? relatedProducts : sameGroupProducts).length > 0
-    ? (relatedProducts.length > 0 ? relatedProducts : sameGroupProducts)
-    : getStoredAluminiumProducts().filter((p) => String(p.id) !== String(product.id) && String(p.code) !== String(product.code));
+  const displayAluminiumRelated = (relatedProducts.length > 0 ? relatedProducts : sameGroupProducts).filter(
+    (p) => String(p.id) !== String(product.id) && String(p.code || "") !== String(product.code || "")
+  );
 
   // الحصول على صور المنتج
   const productImages = product.images && product.images.length > 0 

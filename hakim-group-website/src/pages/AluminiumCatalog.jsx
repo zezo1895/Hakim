@@ -1,6 +1,6 @@
 // src/pages/AluminiumCatalog.jsx
 import React, { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -16,20 +16,22 @@ import {
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import Loader from "../components/Loader";
+import AluminiumCardViewer3D from "../components/AluminiumCardViewer3D";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 const ITEMS_PER_PAGE = 12;
 
-import { DEFAULT_ALUMINIUM_PROFILES, isAluminiumProduct, getStoredAluminiumProducts } from "../data/aluminiumProfiles";
+import { isAluminiumProduct } from "../data/aluminiumProfiles";
 export { isAluminiumProduct };
 
 export default function AluminiumCatalog() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch Aluminium Products from backend
+  // جلب قطاعات الألومنيوم الصادرة من قاعدة البيانات فقط (API Database Only)
   useEffect(() => {
     let isMounted = true;
     const fetchAluminium = async () => {
@@ -39,9 +41,9 @@ export default function AluminiumCatalog() {
         if (res.ok) {
           const data = await res.json();
           if (isMounted) {
-            // الاعتماد الصارم فقط على قاعدة البيانات الحقيقية من الـ API
-            const aluminiumOnly = Array.isArray(data) ? data.filter(isAluminiumProduct) : [];
-            setProducts(aluminiumOnly);
+            // تصفية المنتجات التابعة للألومنيوم الواردة من قاعدة البيانات حصراً
+            const dbAluminiumProducts = Array.isArray(data) ? data.filter(isAluminiumProduct) : [];
+            setProducts(dbAluminiumProducts);
           }
         } else {
           if (isMounted) setProducts([]);
@@ -190,38 +192,21 @@ export default function AluminiumCatalog() {
                     whileHover={{ y: -5, boxShadow: "0 16px 36px rgba(0,0,0,0.08)" }}
                     className="bg-white rounded-2xl border border-slate-200/80 shadow-sm transition-all duration-300 overflow-hidden flex flex-col h-full group"
                   >
-                    <Link to={`/products/${p.id}`} className="flex flex-col flex-1 h-full">
-                      {/* صندوق الصورة بنسبة ثابتة 4:3 ومقاس متطابق */}
-                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-50 group">
-                        <img
-                          src={thumb}
-                          alt={p.name}
-                          loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-500 ease-out group-hover:scale-105"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/placeholder-image.jpg";
-                          }}
-                        />
-
-                        {/* 3D Model Badge */}
-                        {hasModel && (
-                          <div className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-brand-blue/95 backdrop-blur-sm text-white text-[11px] font-bold shadow-md flex items-center gap-1.5 border border-white/20">
-                            <Box size={13} />
-                            <span>معاينة 3D</span>
-                          </div>
-                        )}
-
-                        {/* Code Badge */}
-                        {p.code && (
-                          <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-slate-900/85 backdrop-blur-sm text-white text-[11px] font-mono tracking-wider font-semibold shadow-sm">
-                            {p.code}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex flex-col flex-1 h-full">
+                      {/* عارض ثلاثي الأبعاد 3D مباشر للقطاع بدلاً من الصورة الثابتة */}
+                      <AluminiumCardViewer3D
+                        modelUrl={p.model_url}
+                        thumbnail={thumb}
+                        productName={p.name}
+                        productCode={p.code}
+                        onCardClick={() => navigate(`/products/${p.id}`)}
+                      />
 
                       {/* Content Body */}
-                      <div className="p-5 flex flex-col flex-1">
+                      <div
+                        onClick={() => navigate(`/products/${p.id}`)}
+                        className="p-5 flex flex-col flex-1 cursor-pointer"
+                      >
                         <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold mb-2 w-fit">
                           {p.material_name || "قطاع ألومنيوم"}
                         </span>
@@ -238,11 +223,11 @@ export default function AluminiumCatalog() {
 
                         {/* Card Footer CTA */}
                         <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-blue">
-                          <span>{hasModel ? "معاينة المجسم 3D" : "عرض التفاصيل"}</span>
+                          <span>{hasModel ? "معاينة هندسية وتغيير الألوان 3D" : "عرض التفاصيل"}</span>
                           <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   </motion.div>
                 );
               })}

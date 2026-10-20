@@ -20,6 +20,9 @@ export function ensureUVs(mesh) {
   const norm = geom.attributes.normal;
   const count = pos.count;
   const uvs = new Float32Array(count * 2);
+  const uvMetric = new Float32Array(count * 2); // uv1: إسقاط صندوقي بالمليمتر (حبيبات متساوية الاتجاه)
+  const maxDim = Math.max(sizeX, sizeY, sizeZ);
+  const unitToMm = maxDim >= 50 ? 1 : maxDim >= 1 ? 10 : 1000; // نفس كشف الوحدات في المشغل
 
   // تحديد محور سحب القطاع (Extrusion Axis) تلقائياً بناءً على البعد الأطول
   const isExtrudedZ = sizeZ >= sizeX && sizeZ >= sizeY;
@@ -62,9 +65,26 @@ export function ensureUVs(mesh) {
 
     uvs[i * 2] = u;
     uvs[i * 2 + 1] = v;
+
+    // uv1 متري: الوجه الجانبي (a,e) والعلوي (b,e) وأغطية النهاية (a,b) حسب أكبر مركّبة للـ normal
+    const ax = (x - bbox.min.x) * unitToMm;
+    const ay = (y - bbox.min.y) * unitToMm;
+    const az = (z - bbox.min.z) * unitToMm;
+    let mu, mv;
+    if (isExtrudedZ) {
+      if (nz >= nx && nz >= ny) { mu = ax; mv = ay; } else if (nx >= ny) { mu = ay; mv = az; } else { mu = ax; mv = az; }
+    } else if (isExtrudedY) {
+      if (ny >= nx && ny >= nz) { mu = ax; mv = az; } else if (nx >= nz) { mu = az; mv = ay; } else { mu = ax; mv = ay; }
+    } else {
+      if (nx >= ny && nx >= nz) { mu = ay; mv = az; } else if (ny >= nz) { mu = az; mv = ax; } else { mu = ay; mv = ax; }
+    }
+    uvMetric[i * 2] = mu;
+    uvMetric[i * 2 + 1] = mv;
   }
 
   // ضبط إحداثيات الـ UV وتفعيل التحديث في كارت الشاشة
   geom.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   geom.attributes.uv.needsUpdate = true;
+  geom.setAttribute('uv1', new THREE.BufferAttribute(uvMetric, 2));
+  geom.attributes.uv1.needsUpdate = true;
 }

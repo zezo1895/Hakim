@@ -23,13 +23,6 @@ try {
     }
   }
 
-  // Copy branded logo as favicon.png and apple-touch-icon.png
-  const logoSrc = path.resolve(__dirname, "src/assets/product_1079686086__employee.png");
-  if (fs.existsSync(logoSrc)) {
-    fs.copyFileSync(logoSrc, path.join(publicDir, "favicon.png"));
-    fs.copyFileSync(logoSrc, path.join(publicDir, "logo.png"));
-    fs.copyFileSync(logoSrc, path.join(publicDir, "apple-touch-icon.png"));
-  }
 } catch (e) {
   console.warn("[Vite] Asset copy error:", e);
 }
@@ -39,7 +32,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'favicon.png', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'favicon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Hakim Group',
         short_name: 'Hakim',
@@ -50,12 +43,12 @@ export default defineConfig({
         start_url: '/products',
         icons: [
           {
-            src: 'favicon.png',
+            src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'favicon.png',
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable'

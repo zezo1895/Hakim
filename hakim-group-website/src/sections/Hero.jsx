@@ -17,7 +17,7 @@ const SLIDES = [
     highlight: "خامات غذائية وصناعية معتمدة وتوريد مباشر بأعلى جودة",
     image: "/hero-plastic-rv.jpg",
     fallbackImage: "/Generated Image October 13, 2026 - 3_49PM.jpg",
-    categoryLink: "/products?category=plastic",
+    categoryLink: "/products",
   },
   {
     id: "pipes",

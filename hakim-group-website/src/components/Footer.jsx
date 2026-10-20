@@ -15,7 +15,7 @@ const quickLinks = [
 ];
 
 const sectors = [
-  { label: "قطاع البلاستيك والتغليف", to: "/products?category=بلاستيك" },
+  { label: "قطاع العبوات ومواد التعبئة والتغليف", to: "/products" },
   { label: "مواسير PVC & HDPE وشبكات البنية", to: "/products?category=مواسير" },
   { label: "بروفيلات الألومنيوم المعمارية والصناعية", to: "/aluminium" },
   { label: "طلب تصنيع مواصفات خاصة", to: "/contact" },

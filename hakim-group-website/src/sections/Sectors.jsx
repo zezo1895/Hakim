@@ -98,7 +98,7 @@ function SectorCard({ sector }) {
 
         {/* Action Button */}
         <Link
-          to={sector.id === "aluminium" ? "/aluminium" : `/products?category=${encodeURIComponent(sector.category)}`}
+          to={sector.id === "aluminium" ? "/aluminium" : sector.id === "plastic" ? "/products" : `/products?category=${encodeURIComponent(sector.category)}`}
           className="inline-flex items-center justify-between w-full px-4 py-3 rounded-xl text-sm font-bold text-brand-blue bg-slate-50 border border-slate-200/80 group-hover:bg-brand-blue group-hover:text-white group-hover:border-brand-blue transition-all duration-200"
         >
           <span>{sector.ctaLabel}</span>

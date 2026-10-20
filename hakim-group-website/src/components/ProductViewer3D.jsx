@@ -431,9 +431,13 @@ export default function ProductViewer3D({
         dimGroup.visible = showDimensions;
         scene.add(dimGroup);
 
-        // Frame camera based on model size
-        const radius = Math.max(size.x, size.y, size.z) * 1.6;
-        camera.position.set(radius * 0.9, radius * 0.8, radius * 1.3);
+        // تقريب الكاميرا وضبط المنظور لملء المشهد بوضوح وتفادي البعد المبالغ فيه
+        const fov = camera.fov * (Math.PI / 180);
+        const fitDistance = (maxDim / 2) / Math.tan(fov / 2);
+        // مضاعف 1.15 يقرّب المجسم بشكل كبير مع إعطاء مساحة متناسقة لخطوط الأبعاد
+        const targetDistance = fitDistance * 1.15;
+        const dir = new THREE.Vector3(0.68, 0.48, 0.85).normalize();
+        camera.position.copy(dir.multiplyScalar(targetDistance));
         controls.target.set(0, 0, 0);
         controls.update();
 

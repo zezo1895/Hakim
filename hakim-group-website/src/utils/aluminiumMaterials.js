@@ -218,20 +218,20 @@ function createAntiqueTexture(hex) {
   ctx.fillStyle = hex;
   ctx.fillRect(0, 0, S, S);
   // بقع كبيرة ناعمة فاتحة وغامقة
-  for (let i = 0; i < 90; i++) {
-    const x = rand() * S, y = rand() * S, r = 20 + rand() * 90;
+  for (let i = 0; i < 60; i++) {
+    const x = rand() * S, y = rand() * S, r = 40 + rand() * 110;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-    const c = rand() > 0.5 ? mix(hex, '#000000', 0.35) : mix(hex, '#ffffff', 0.22);
+    const c = rand() > 0.5 ? mix(hex, '#000000', 0.18) : mix(hex, '#ffffff', 0.10);
     g.addColorStop(0, c);
     g.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.globalAlpha = 0.18 + rand() * 0.2;
+    ctx.globalAlpha = 0.06 + rand() * 0.08;
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   }
   // خدوش خفيفة
   ctx.strokeStyle = mix(hex, '#ffffff', 0.3);
-  for (let i = 0; i < 180; i++) {
-    ctx.globalAlpha = 0.05 + rand() * 0.1;
+  for (let i = 0; i < 100; i++) {
+    ctx.globalAlpha = 0.03 + rand() * 0.05;
     ctx.lineWidth = 0.6;
     const x = rand() * S, y = rand() * S;
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 20 + rand() * 80, y + (rand() - 0.5) * 4); ctx.stroke();
@@ -244,6 +244,11 @@ function createAntiqueTexture(hex) {
 
 /* ------------------------------ السابليه ------------------------------ */
 
+// حجم الحبيبة: texel ≈ 0.4mm → دورة الخريطة (256 texel) ≈ 100mm. uv1 بالمليمتر فالـ repeat = 1/دورة
+export const GRAIN_PERIOD_MM = 100;
+export const SABLE_BUMP_SCALE = 2.0;
+export const ANTIQUE_BUMP_SCALE = 1.5;
+
 function getSableBumpTexture() {
   if (cache.has('sable')) return cache.get('sable');
   const size = 256;
@@ -252,13 +257,22 @@ function getSableBumpTexture() {
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(size, size);
   const rand = rng(4242);
-  for (let i = 0; i < img.data.length; i += 4) {
-    const v = Math.floor(180 + rand() * 75);
-    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
-    img.data[i + 3] = 255;
+  // طبقتين: حبيبة ناعمة (texel) + حبيبة أكبر 2x2 بسعة أقل، عشان تطلع رملية مش تلفزيون
+  const coarse = new Float32Array((size / 2) * (size / 2)).map(() => rand());
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const fine = (rand() + rand()) / 2;
+      const c = coarse[(y >> 1) * (size / 2) + (x >> 1)];
+      const v = Math.floor(255 * (0.65 * fine + 0.35 * c));
+      const i = (y * size + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+      img.data[i + 3] = 255;
+    }
   }
   ctx.putImageData(img, 0, 0);
-  const tex = finishCanvasTexture(canvas, { colorSpace: false, repeatX: 16, repeatY: 16 });
+  const tex = finishCanvasTexture(canvas, { colorSpace: false });
+  tex.channel = 1; // يقرأ من uv1 (إسقاط متري) مش uv الخاص بالخشب
+  tex.repeat.set(1 / GRAIN_PERIOD_MM, 1 / GRAIN_PERIOD_MM);
   cache.set('sable', tex);
   return tex;
 }
@@ -307,7 +321,7 @@ function buildMaterial(finish) {
       metalness: 0.15,
       roughness: 0.88,
       bumpMap: getSableBumpTexture(),
-      bumpScale: 0.004,
+      bumpScale: SABLE_BUMP_SCALE,
     });
   }
 
@@ -318,7 +332,7 @@ function buildMaterial(finish) {
       color: 0xffffff,
       map: createAntiqueTexture(finish.hex || '#4A3C30'),
       bumpMap: getSableBumpTexture(),
-      bumpScale: 0.003,
+      bumpScale: ANTIQUE_BUMP_SCALE,
       metalness: isRust ? 0.2 : (finish.metalness ?? 0.8),
       roughness: isRust ? 0.8 : (finish.roughness ?? 0.45),
     });
