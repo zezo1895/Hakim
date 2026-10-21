@@ -65,17 +65,21 @@ export const isAluminiumProduct = (p) => {
   if (!p) return false;
   const cat = (p.material_category || "").trim().toLowerCase();
   const mat = (p.material_name || "").trim().toLowerCase();
+  const type = (p.type_name || "").trim().toLowerCase();
   const name = (p.name || "").trim().toLowerCase();
   const code = (p.code || "").trim().toLowerCase();
 
   // 1. إذا كان المنتج يحتوي على ملف نموذج ثلاثي الأبعاد GLB
   if (Boolean(p.model_url)) return true;
 
-  // 2. إذا كانت الفئة أو الخامة تنتمي صراحة للألومنيوم
+  // 2. إذا كانت الفئة أو الخامة أو النوع تنتمي صراحة للألومنيوم
   if (cat.includes("ألومنيوم") || cat.includes("الومنيوم") || cat.includes("aluminium") || cat.includes("aluminum")) {
     return true;
   }
   if (mat.includes("ألومنيوم") || mat.includes("الومنيوم") || mat.includes("aluminium") || mat.includes("aluminum")) {
+    return true;
+  }
+  if (type.includes("ألومنيوم") || type.includes("الومنيوم") || type.includes("aluminium") || type.includes("aluminum")) {
     return true;
   }
 

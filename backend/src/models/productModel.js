@@ -51,7 +51,9 @@ exports.getAll = async (filters = {}) => {
   const whereConditions = [];
   const params = [];
 
-  if (filters.category) {
+  if (filters.category === "ألومنيوم") {
+    whereConditions.push("(mc.name = 'ألومنيوم' OR p.model_url IS NOT NULL OR pt.name = 'قطاع ألومنيوم' OR pt.id = 'al-type-01')");
+  } else if (filters.category) {
     whereConditions.push("mc.name = ?");
     params.push(filters.category);
   }
@@ -217,7 +219,9 @@ exports.search = async (q, filters = {}) => {
   const whereConditions = ["(p.name LIKE ? OR p.code LIKE ?)"];
   const params = [`%${q}%`, `%${q}%`];
 
-  if (filters.category) {
+  if (filters.category === "ألومنيوم") {
+    whereConditions.push("(mc.name = 'ألومنيوم' OR p.model_url IS NOT NULL OR pt.name = 'قطاع ألومنيوم' OR pt.id = 'al-type-01')");
+  } else if (filters.category) {
     whereConditions.push("mc.name = ?");
     params.push(filters.category);
   }

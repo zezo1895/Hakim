@@ -27,26 +27,53 @@ export { isAluminiumProduct };
 export default function AluminiumCatalog() {
   const navigate = useNavigate();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("الكل");
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  // جلب قطاعات الألومنيوم الصادرة من قاعدة البيانات فقط (API Database Only)
+  // جلب قطاعات الألومنيوم الصادرة من قاعدة البيانات وتصنيفاتها
   useEffect(() => {
     let isMounted = true;
-    const fetchAluminium = async () => {
+    const fetchAluminiumAndCategories = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API}/products?category=${encodeURIComponent("ألومنيوم")}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            // تصفية المنتجات التابعة للألومنيوم الواردة من قاعدة البيانات حصراً
-            const dbAluminiumProducts = Array.isArray(data) ? data.filter(isAluminiumProduct) : [];
-            setProducts(dbAluminiumProducts);
+        const [prodRes, matsRes] = await Promise.all([
+          fetch(`${API}/products?category=${encodeURIComponent("ألومنيوم")}`),
+          fetch(`${API}/products/materials`).catch(() => null),
+        ]);
+
+        if (prodRes.ok && isMounted) {
+          let data = await prodRes.json();
+          if (!Array.isArray(data) || data.length === 0) {
+            try {
+              const allRes = await fetch(`${API}/products`);
+              if (allRes.ok) {
+                const allData = await allRes.json();
+                data = Array.isArray(allData) ? allData.filter(isAluminiumProduct) : [];
+              }
+            } catch (e) {
+              console.debug("Fallback fetch error:", e);
+            }
           }
-        } else {
-          if (isMounted) setProducts([]);
+          const dbAluminiumProducts = Array.isArray(data) ? data.filter(isAluminiumProduct) : [];
+          setProducts(dbAluminiumProducts);
+        }
+
+        if (matsRes && matsRes.ok && isMounted) {
+          const matsData = await matsRes.json();
+          const alCat = Array.isArray(matsData)
+            ? matsData.find(
+                (g) =>
+                  g.name === "ألومنيوم" ||
+                  g.id === "al-cat-01" ||
+                  String(g.name).toLowerCase().includes("ألومنيوم")
+              )
+            : null;
+          if (alCat?.materials) {
+            setCategories(alCat.materials.map((m) => m.name));
+          }
         }
       } catch (err) {
         console.error("Backend fetch error:", err);
@@ -56,26 +83,58 @@ export default function AluminiumCatalog() {
       }
     };
 
-    fetchAluminium();
-    return () => { isMounted = false; };
+    fetchAluminiumAndCategories();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Filter products by search term (name or code)
-  const filteredProducts = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) return products;
+  const DEFAULT_SYSTEMS = [
+    "أبواب وشبابيك",
+    "واجهات وكرتن وول",
+    "مطابخ وديكور",
+    "قطاعات إنشائية ومعمارية",
+  ];
 
-    return products.filter((p) => {
-      const matchName = p.name && p.name.toLowerCase().includes(term);
-      const matchCode = p.code && p.code.toLowerCase().includes(term);
-      return matchName || matchCode;
+  // دمج التصنيفات الواردة من الـ API مع التصنيفات المسجلة في المنتجات فعلياً والأنظمة القياسية
+  const allCategories = useMemo(() => {
+    const set = new Set(categories);
+    products.forEach((p) => {
+      if (p.material_name && p.material_name.trim()) {
+        set.add(p.material_name.trim());
+      }
     });
-  }, [products, searchTerm]);
+    DEFAULT_SYSTEMS.forEach((sys) => set.add(sys));
+    return Array.from(set).filter(Boolean);
+  }, [categories, products]);
 
-  // Reset page when search term changes
+  // Filter products by selected category and search term (name, code, notes)
+  const filteredProducts = useMemo(() => {
+    let list = products;
+
+    if (selectedCategory !== "الكل") {
+      list = list.filter(
+        (p) => (p.material_name || "").trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+      );
+    }
+
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      list = list.filter((p) => {
+        const matchName = p.name && p.name.toLowerCase().includes(term);
+        const matchCode = p.code && p.code.toLowerCase().includes(term);
+        const matchNotes = p.notes && p.notes.toLowerCase().includes(term);
+        return matchName || matchCode || matchNotes;
+      });
+    }
+
+    return list;
+  }, [products, selectedCategory, searchTerm]);
+
+  // Reset page when search term or category changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedCategory]);
 
   // Pagination calculation
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
@@ -100,12 +159,12 @@ export default function AluminiumCatalog() {
         <title>كتالوج قطاعات وبروفيلات الألومنيوم 3D | مجموعة حكيم</title>
         <meta
           name="description"
-          content="استكشف كتالوج قطاعات وبروفيلات الألومنيوم الهندسية والمعمارية من مجموعة حكيم مع ميزة المعاينة ثلاثية الأبعاد 3D وقياس الأبعاد وتغيير الألوان."
+          content="استكشف كتالوج قطاعات وبروفيلات الألومنيوم الهندسية والمعمارية (أبواب، شبابيك، واجهات، مطابخ) من مجموعة حكيم مع ميزة المعاينة ثلاثية الأبعاد 3D وقياس الأبعاد وتغيير الألوان."
         />
         <meta property="og:title" content="كتالوج قطاعات الألومنيوم 3D | مجموعة حكيم" />
         <meta
           property="og:description"
-          content="معاينة هندسية ثلاثية الأبعاد 3D لقطاعات وبروفيلات الألومنيوم مع قياس الأبعاد وتغيير التشطيبات."
+          content="معاينة هندسية ثلاثية الأبعاد 3D لقطاعات وبروفيلات الألومنيوم مع قياس الأبعاد وتغيير التشطيبات وتصفح حسب الأنظمة."
         />
       </Helmet>
 
@@ -120,12 +179,17 @@ export default function AluminiumCatalog() {
             كتالوج قطاعات وبروفيلات الألومنيوم
           </h1>
           <p className="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            استعرض بروفيلات الألومنيوم المعمارية والصناعية بدقة فائقة. اضغط على أي قطاع للدخول في وضع المعاينة ثلاثية الأبعاد (3D)، فحص الأبعاد بالملليمتر وتغيير ألوان وتشطيبات الأكسدة.
+            استعرض بروفيلات الألومنيوم المعمارية والصناعية بدقة فائقة حسب الأنظمة (أبواب وشبابيك، واجهات، مطابخ، قطاعات إنشائية). اضغط على أي قطاع للدخول في وضع المعاينة ثلاثية الأبعاد (3D)، فحص الأبعاد بالملليمتر وتغيير ألوان وتشطيبات الأكسدة.
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-xs font-semibold text-slate-500">
             <span className="flex items-center gap-1">
               <CheckCircle2 size={14} className="text-emerald-500" />
               {products.length} قطاع متاح
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <Layers size={14} className="text-brand-blue" />
+              {allCategories.length} تصنيفات وأنظمة
             </span>
             <span>•</span>
             <span className="flex items-center gap-1">
@@ -139,7 +203,7 @@ export default function AluminiumCatalog() {
       {/* Search & Content Container */}
       <section id="aluminium-catalog-grid" className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Search Box */}
-        <div className="max-w-xl mx-auto mb-10">
+        <div className="max-w-xl mx-auto mb-6">
           <div className="relative shadow-sm rounded-2xl">
             <Search
               size={19}
@@ -169,6 +233,62 @@ export default function AluminiumCatalog() {
             </p>
           )}
         </div>
+
+        {/* أزرار وتبويبات تصنيفات الألومنيوم (Category Filter Tabs) */}
+        {allCategories.length > 0 && (
+          <div className="flex items-center justify-start sm:justify-center gap-2 overflow-x-auto pb-4 pt-1 mb-8 no-scrollbar scroll-smooth">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("الكل")}
+              className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                selectedCategory === "الكل"
+                  ? "bg-brand-blue text-white shadow-md shadow-brand-blue/20 ring-2 ring-brand-blue/30"
+                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80 hover:border-slate-300"
+              }`}
+            >
+              <Layers size={14} />
+              <span>الكل</span>
+              <span
+                className={`text-[11px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                  selectedCategory === "الكل"
+                    ? "bg-white/20 text-white"
+                    : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                {products.length}
+              </span>
+            </button>
+
+            {allCategories.map((cat) => {
+              const count = products.filter(
+                (p) => (p.material_name || "").trim().toLowerCase() === cat.trim().toLowerCase()
+              ).length;
+              const active = selectedCategory === cat;
+
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+                    active
+                      ? "bg-brand-blue text-white shadow-md shadow-brand-blue/20 ring-2 ring-brand-blue/30"
+                      : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200/80 hover:border-slate-300"
+                  }`}
+                >
+                  <span>{cat}</span>
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                      active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* Product Grid */}
         {paginatedProducts.length > 0 ? (
@@ -207,13 +327,20 @@ export default function AluminiumCatalog() {
                         onClick={() => navigate(`/products/${p.id}`)}
                         className="p-5 flex flex-col flex-1 cursor-pointer"
                       >
-                        <span className="inline-block px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-bold mb-2 w-fit">
-                          {p.material_name || "قطاع ألومنيوم"}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50/80 text-brand-blue border border-blue-100 text-[11px] font-bold mb-2.5 w-fit">
+                          <Layers size={12} className="text-brand-blue" />
+                          <span>{p.material_name || "قطاع ألومنيوم"}</span>
                         </span>
 
                         <h3 className="font-bold text-slate-800 text-base mb-1 line-clamp-1 group-hover:text-brand-blue transition-colors">
                           {p.name}
                         </h3>
+
+                        {p.code && (
+                          <p className="text-slate-400 font-mono text-xs mb-2">
+                            كود: {p.code}
+                          </p>
+                        )}
 
                         {p.notes && (
                           <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed mb-4">
@@ -240,11 +367,16 @@ export default function AluminiumCatalog() {
             </div>
             <h3 className="text-lg font-bold text-slate-800 mb-1">لا توجد قطاعات مطابقة</h3>
             <p className="text-sm text-slate-400 mb-5">
-              لم نتمكن من العثور على قطاع ألومنيوم يطابق بحثك الحالي "{searchTerm}".
+              لم نتمكن من العثور على قطاع ألومنيوم يطابق بحثك الحالي
+              {selectedCategory !== "الكل" ? ` في تصنيف "${selectedCategory}"` : ""}
+              {searchTerm ? ` للبحث "${searchTerm}"` : ""}.
             </p>
             <button
               type="button"
-              onClick={() => setSearchTerm("")}
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedCategory("الكل");
+              }}
               className="px-5 py-2.5 bg-brand-blue text-white rounded-xl text-xs font-bold shadow hover:opacity-90 transition-opacity"
             >
               عرض جميع القطاعات

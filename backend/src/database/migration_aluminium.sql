@@ -42,9 +42,14 @@ INSERT INTO material_categories (id, name)
 VALUES ('al-cat-01', 'ألومنيوم')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
--- 3. التأكد من وجود خامة فرعية تحت الألومنيوم لربط المنتجات بها
+-- 3. التأكد من وجود خامات وتصنيفات فرعية تحت الألومنيوم لربط المنتجات بها
 INSERT INTO materials (id, category_id, name)
-VALUES ('al-mat-01', 'al-cat-01', 'قطاعات ألومنيوم')
+VALUES 
+  ('al-mat-01', 'al-cat-01', 'قطاعات ألومنيوم عامة'),
+  ('al-mat-02', 'al-cat-01', 'أبواب وشبابيك'),
+  ('al-mat-03', 'al-cat-01', 'واجهات وكرتن وول'),
+  ('al-mat-04', 'al-cat-01', 'مطابخ وديكور'),
+  ('al-mat-05', 'al-cat-01', 'قطاعات إنشائية ومعمارية')
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- 4. التأكد من وجود فئتي المواسير والبلاستيك لضمان تكامل القطاعات الثلاثة

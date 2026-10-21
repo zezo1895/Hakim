@@ -69,14 +69,29 @@ async function runAutoMigrations(conn = null) {
     }
 
     try {
-      await connection.query(`
-        INSERT INTO materials (id, category_id, name)
-        VALUES ('al-mat-01', 'al-cat-01', 'قطاعات ألومنيوم')
-        ON DUPLICATE KEY UPDATE name = 'قطاعات ألومنيوم'
-      `);
-      log.push("Seeded material al-mat-01");
+      const defaultAluminiumMaterials = [
+        { id: 'al-mat-01', name: 'قطاعات ألومنيوم عامة' },
+        { id: 'al-mat-02', name: 'أبواب وشبابيك' },
+        { id: 'al-mat-03', name: 'واجهات وكرتن وول' },
+        { id: 'al-mat-04', name: 'مطابخ وديكور' },
+        { id: 'al-mat-05', name: 'قطاعات إنشائية ومعمارية' },
+      ];
+
+      for (const item of defaultAluminiumMaterials) {
+        const [existing] = await connection.query(
+          "SELECT id FROM materials WHERE category_id = 'al-cat-01' AND (id = ? OR name = ?)",
+          [item.id, item.name]
+        );
+        if (!existing.length) {
+          await connection.query(
+            "INSERT INTO materials (id, category_id, name) VALUES (?, 'al-cat-01', ?)",
+            [item.id, item.name]
+          );
+          log.push(`Seeded aluminium subcategory: ${item.name}`);
+        }
+      }
     } catch (e) {
-      log.push(`Material seed: ${e.message}`);
+      log.push(`Aluminium subcategories seed error: ${e.message}`);
     }
 
     try {

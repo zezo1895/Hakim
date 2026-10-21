@@ -101,8 +101,8 @@ exports.create = async (req, res) => {
     // Default aluminium lookups if uploading 3D or aluminium category
     const isAluminium = category === "ألومنيوم" || req.modelFile || (material_id && String(material_id).includes("al-"));
     if (isAluminium) {
-      if (!material_id || material_id === "al-mat-01") material_id = "al-mat-01";
-      if (!type_id || type_id === "al-type-01") type_id = "al-type-01";
+      if (!material_id) material_id = "al-mat-01";
+      if (!type_id) type_id = "al-type-01";
     }
 
     // Verify foreign keys to prevent ER_NO_REFERENCED_ROW_2

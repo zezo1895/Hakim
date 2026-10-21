@@ -38,7 +38,9 @@ import {
   LogOut,
   BarChart3,
   Bot,
-  Box
+  Box,
+  Edit2,
+  Check
 } from "lucide-react";
 import AluminiumForm from "../components/admin/AluminiumForm";
 import WoodFinishesModal from "../components/admin/WoodFinishesModal";
@@ -1785,7 +1787,208 @@ function ProductFormModal({
 // ─────────────────────────────────────────────────────────────
 // Settings Panel
 // ─────────────────────────────────────────────────────────────
-function SettingsPanel({ types, materialGroups, groups, onRefresh, toast }) {
+// ─────────────────────────────────────────────────────────────
+// Aluminium Categories Manager
+// ─────────────────────────────────────────────────────────────
+function AluminiumCategoriesManager({ grouped, onRefresh, toast, products = [] }) {
+  const alCat = grouped?.find(
+    (g) =>
+      g.name === "ألومنيوم" ||
+      g.id === "al-cat-01" ||
+      String(g.name).toLowerCase().includes("ألومنيوم")
+  );
+  const catId = alCat?.id || "al-cat-01";
+  const categories = alCat?.materials || [];
+
+  const [newCatName, setNewCatName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+
+  const addCategory = async () => {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    setAdding(true);
+    try {
+      const res = await apiFetch("/materials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed, category_id: catId }),
+      });
+      if (res.ok) {
+        toast("تمت إضافة تصنيف الألومنيوم بنجاح ✓");
+        setNewCatName("");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل إضافة التصنيف", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const deleteCategory = async (id, name) => {
+    if (!window.confirm(`هل أنت متأكد من حذف تصنيف الألومنيوم "${name}"؟`)) return;
+    try {
+      const res = await apiFetch(`/materials/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast("تم حذف التصنيف بنجاح ✓");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل حذف التصنيف", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
+  };
+
+  const editCategory = async (id) => {
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      const res = await apiFetch(`/materials/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (res.ok) {
+        toast("تم تعديل التصنيف بنجاح ✓");
+        setEditingId(null);
+        setEditingName("");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل تعديل التصنيف", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+            <Layers size={16} className="text-brand-blue" />
+            <span>تصنيفات وأنظمة قطاعات الألومنيوم</span>
+          </h4>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-blue font-bold">
+            {categories.length} تصنيف متاح
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+          أضف أو احذف تصنيفات الألومنيوم التي تظهر في الكتالوج المعماري ونموذج إضافة القطاعات (مثل: أبواب وشبابيك، واجهات وكرتن وول، مطابخ وديكور...).
+        </p>
+
+        <div className="flex gap-2">
+          <input
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addCategory()}
+            placeholder="تصنيف جديد (مثال: أبواب وشبابيك)..."
+            className="flex-1 px-4 py-2.5 text-xs sm:text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-blue/30"
+          />
+          <button
+            onClick={addCategory}
+            disabled={adding || !newCatName.trim()}
+            className="px-5 py-2.5 bg-brand-blue text-white rounded-xl text-xs font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1.5"
+          >
+            <Plus size={14} />
+            <span>{adding ? "جاري الإضافة..." : "إضافة تصنيف"}</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {categories.length === 0 ? (
+          <div className="p-8 text-center text-gray-400 bg-white rounded-2xl border border-gray-100 text-xs">
+            لا توجد تصنيفات ألومنيوم حالياً. اكتب اسماً في الحقل أعلاه وأضف أول تصنيف.
+          </div>
+        ) : (
+          categories.map((c) => {
+            const count = products.filter(
+              (p) => p.material_id === c.id || (p.material_name || "").trim().toLowerCase() === c.name.trim().toLowerCase()
+            ).length;
+            const isEditing = editingId === c.id;
+
+            return (
+              <div
+                key={c.id}
+                className="bg-white p-3.5 px-4 rounded-xl border border-gray-100 flex items-center justify-between gap-3 hover:border-gray-200 transition-colors shadow-sm"
+              >
+                {isEditing ? (
+                  <div className="flex-1 flex items-center gap-2">
+                    <input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && editCategory(c.id)}
+                      className="flex-1 px-3 py-1.5 text-xs sm:text-sm border border-brand-blue rounded-lg outline-none font-bold"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => editCategory(c.id)}
+                      className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                      title="حفظ"
+                    >
+                      <Check size={15} />
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"
+                      title="إلغاء"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-brand-blue shrink-0" />
+                    <span className="text-sm font-bold text-gray-800">{c.name}</span>
+                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                      {count} قطاع
+                    </span>
+                  </div>
+                )}
+
+                {!isEditing && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingId(c.id);
+                        setEditingName(c.name);
+                      }}
+                      className="p-1.5 text-gray-400 hover:text-brand-blue hover:bg-gray-50 rounded-lg transition-colors"
+                      title="تعديل الاسم"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => deleteCategory(c.id, c.name)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="حذف التصنيف"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SettingsPanel({ types, materialGroups, groups, onRefresh, toast, products = [] }) {
   const [tab, setTab] = useState("types");
 
   const crud = (endpoint) => ({
@@ -2188,6 +2391,264 @@ function BulkEditModal({ selectedIds, products, groups, onClose, onSaved }) {
 // ─────────────────────────────────────────────────────────────
 // Main Admin Page - الكود الكامل المصحح
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Aluminium Categories Modal
+// ─────────────────────────────────────────────────────────────
+function AluminiumCategoriesModal({ isOpen, onClose, grouped, onRefresh, toast, products = [] }) {
+  if (!isOpen) return null;
+
+  const alCat = grouped?.find(
+    (g) =>
+      g.name === "ألومنيوم" ||
+      g.id === "al-cat-01" ||
+      String(g.name).toLowerCase().includes("ألومنيوم")
+  );
+  const catId = alCat?.id || "al-cat-01";
+  const categories = alCat?.materials || [];
+
+  const [newCatName, setNewCatName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState("");
+
+  const PRESETS = ["أبواب وشبابيك", "واجهات وكرتن وول", "مطابخ وديكور", "قطاعات إنشائية ومعمارية", "قطاعات ألومنيوم عامة"];
+
+  const addCategory = async (nameToAdd) => {
+    const trimmed = (nameToAdd || newCatName).trim();
+    if (!trimmed) return;
+    setAdding(true);
+    try {
+      const res = await apiFetch("/materials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed, category_id: catId }),
+      });
+      if (res.ok) {
+        toast("تمت إضافة تصنيف الألومنيوم بنجاح ✓");
+        setNewCatName("");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل إضافة التصنيف", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const deleteCategory = async (id, name) => {
+    if (!window.confirm(`هل أنت متأكد من حذف تصنيف الألومنيوم "${name}"؟`)) return;
+    try {
+      const res = await apiFetch(`/materials/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast("تم حذف التصنيف بنجاح ✓");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل حذف التصنيف", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
+  };
+
+  const editCategory = async (id) => {
+    const trimmed = editingName.trim();
+    if (!trimmed) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      const res = await apiFetch(`/materials/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (res.ok) {
+        toast("تم تعديل التصنيف بنجاح ✓");
+        setEditingId(null);
+        setEditingName("");
+        onRefresh();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast(data.error || "فشل تعديل التصنيف", "error");
+      }
+    } catch {
+      toast("فشل الاتصال بالخادم", "error");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 max-w-lg w-full overflow-hidden flex flex-col max-h-[85vh]">
+        {/* Header */}
+        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-slate-50/70">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+              <Layers size={20} />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-gray-900 text-base">تصنيفات قطاعات الألومنيوم</h3>
+              <p className="text-xs text-gray-500">إضافة أو حذف تصنيفات الألومنيوم (أبواب، شبابيك، واجهات، مطابخ...)</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-5">
+          {/* Add input */}
+          <div>
+            <label className="text-xs font-bold text-gray-700 block mb-1.5">إضافة تصنيف جديد</label>
+            <div className="flex gap-2">
+              <input
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCategory()}
+                placeholder="اكتب اسم التصنيف (مثال: أبواب وشبابيك)..."
+                className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              />
+              <button
+                onClick={() => addCategory()}
+                disabled={adding || !newCatName.trim()}
+                className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors shrink-0 flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus size={14} />
+                <span>{adding ? "جاري..." : "+ إضافة"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick presets */}
+          <div>
+            <span className="text-[11px] font-bold text-gray-400 block mb-1.5">تصنيفات قياسية مقترحة (انقر للإضافة الفورية):</span>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESETS.map((preset) => {
+                const exists = categories.some((c) => c.name.trim() === preset);
+                if (exists) return null;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => addCategory(preset)}
+                    disabled={adding}
+                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200/80 hover:border-indigo-200 text-xs font-medium transition-all flex items-center gap-1"
+                  >
+                    <Plus size={12} />
+                    <span>{preset}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Categories list */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-gray-700">التصنيفات المتاحة حالياً ({categories.length}):</span>
+            </div>
+
+            {categories.length === 0 ? (
+              <div className="p-6 text-center text-gray-400 bg-slate-50 rounded-2xl border border-slate-100 text-xs">
+                لا توجد تصنيفات حالياً. يمكنك كتابة تصنيف بالأعلى أو النقر على أحد التصنيفات المقترحة.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {categories.map((c) => {
+                  const count = products.filter(
+                    (p) => p.material_id === c.id || (p.material_name || "").trim().toLowerCase() === c.name.trim().toLowerCase()
+                  ).length;
+                  const isEditing = editingId === c.id;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="p-3 px-4 rounded-xl border border-gray-100 bg-white hover:border-gray-200 flex items-center justify-between gap-3 shadow-sm transition-all"
+                    >
+                      {isEditing ? (
+                        <div className="flex-1 flex items-center gap-2">
+                          <input
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && editCategory(c.id)}
+                            className="flex-1 px-3 py-1.5 text-xs sm:text-sm border border-indigo-500 rounded-lg outline-none font-bold"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => editCategory(c.id)}
+                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg"
+                            title="حفظ"
+                          >
+                            <Check size={15} />
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg"
+                            title="إلغاء"
+                          >
+                            <X size={15} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0" />
+                          <span className="text-sm font-bold text-gray-800">{c.name}</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                            {count} قطاع
+                          </span>
+                        </div>
+                      )}
+
+                      {!isEditing && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditingId(c.id);
+                              setEditingName(c.name);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors"
+                            title="تعديل الاسم"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            onClick={() => deleteCategory(c.id, c.name)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="حذف التصنيف"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-gray-100 bg-slate-50/50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+          >
+            إغلاق
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Admin() {
   const [params] = useSearchParams();
 
@@ -2214,6 +2675,7 @@ export default function Admin() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showWoodModal, setShowWoodModal] = useState(false);
+  const [showAluminiumCatsModal, setShowAluminiumCatsModal] = useState(false);
   const [search, setSearch] = useState("");
   const [filterSector, setFilterSector] = useState("الكل");
   const [filterType, setFilterType] = useState("");
@@ -2690,6 +3152,14 @@ export default function Admin() {
               إعدادات الذكاء الاصطناعي
             </button>
             <button
+              onClick={() => setShowAluminiumCatsModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/40 transition shadow-sm"
+              title="إدارة تصنيفات الألومنيوم (أبواب، شبابيك، واجهات، مطابخ...)"
+            >
+              <Layers size={15} />
+              <span>تصنيفات الألومنيوم</span>
+            </button>
+            <button
               onClick={() => setShowWoodModal(true)}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-full bg-amber-700/80 hover:bg-amber-600 text-white border border-amber-500/40 transition shadow-sm"
               title="إدارة خامات وتشطيبات الخشب للألومنيوم ونسخ الكود"
@@ -2896,6 +3366,77 @@ export default function Admin() {
             );
           })}
         </div>
+
+        {/* شريط تصنيفات الألومنيوم السريع عند اختيار قطاع الألومنيوم */}
+        {filterSector === "ألومنيوم" && (
+          <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-black text-indigo-950 flex items-center gap-1.5 ml-1">
+                <Layers size={15} className="text-indigo-600" />
+                <span>تصنيفات الألومنيوم:</span>
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setFilterMaterial("")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  !filterMaterial
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-white text-indigo-900 border border-indigo-200/80 hover:bg-white/90"
+                }`}
+              >
+                الكل ({sectorCounts.aluminium})
+              </button>
+
+              {(
+                materialGroups.find(
+                  (g) =>
+                    g.name === "ألومنيوم" ||
+                    g.id === "al-cat-01" ||
+                    String(g.name).toLowerCase().includes("ألومنيوم")
+                )?.materials || []
+              ).map((c) => {
+                const count = products.filter(
+                  (p) =>
+                    p.material_id === c.id ||
+                    (p.material_name || "").trim().toLowerCase() === c.name.trim().toLowerCase()
+                ).length;
+                const active = filterMaterial === c.id || filterMaterial === c.name;
+
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setFilterMaterial(active ? "" : c.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      active
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "bg-white text-indigo-900 border border-indigo-200/80 hover:bg-white/90"
+                    }`}
+                  >
+                    <span>{c.name}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        active ? "bg-white/20 text-white" : "bg-indigo-100 text-indigo-700"
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAluminiumCatsModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm"
+            >
+              <Plus size={13} />
+              <span>إدارة وتعديل التصنيفات</span>
+            </button>
+          </div>
+        )}
 
         {/* البحث والفلترة */}
         <div className="flex flex-wrap gap-3 items-center">
@@ -3495,6 +4036,16 @@ export default function Admin() {
         <AISettingsModal
           authKey={localStorage.getItem(ADMIN_AUTH_KEY)}
           onClose={() => setShowAISettings(false)}
+        />
+      )}
+      {showAluminiumCatsModal && (
+        <AluminiumCategoriesModal
+          isOpen={showAluminiumCatsModal}
+          onClose={() => setShowAluminiumCatsModal(false)}
+          grouped={materialGroups}
+          onRefresh={load}
+          toast={notify}
+          products={products}
         />
       )}
       {showWoodModal && (
